@@ -4,7 +4,9 @@ import os
 import uuid
 import traceback
 
-from services.replicate_models import get_or_create_model, slugify, list_trained_models, get_model_details
+from services.replicate_models import (
+    get_or_create_model, ensure_model_exists, slugify, list_trained_models, get_model_details
+)
 from services.training import start_training, poll_training_status
 from models.product import (
     save_product, get_product, list_products, get_trained_products, upsert_trained_product
@@ -160,7 +162,8 @@ def train_product():
             full_name, model_slug = get_or_create_model(product_name)
             save_product(product_name, model_slug)
         else:
-            full_name = f"{os.getenv('REPLICATE_OWNER', 'saptarshimazumder')}/{product['model_slug']}"
+            # Ensure model still exists in Replicate for this slug
+            full_name, _ = ensure_model_exists(product['model_slug'])
 
         # Determine ZIP URL
         zip_url = data.get('zip_url')

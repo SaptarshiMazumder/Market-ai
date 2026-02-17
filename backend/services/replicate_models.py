@@ -41,6 +41,31 @@ def get_or_create_model(product_name):
     return full_name, model_slug
 
 
+def ensure_model_exists(model_slug):
+    """
+    Ensure a Replicate model exists for the given slug under the configured owner.
+    Returns the full model identifier 'owner/name'.
+    """
+    full_name = f"{REPLICATE_OWNER}/{model_slug}"
+
+    try:
+        replicate.models.get(full_name)
+        print(f"[Model] Found existing model: {full_name}")
+        return full_name, model_slug
+    except Exception:
+        pass
+
+    print(f"[Model] Creating new model: {full_name}")
+    replicate.models.create(
+        owner=REPLICATE_OWNER,
+        name=model_slug,
+        visibility="private",
+        hardware=REPLICATE_HARDWARE
+    )
+    print(f"[Model] Created model: {full_name}")
+    return full_name, model_slug
+
+
 def list_trained_models():
     """
     Fetch successful trainings from Replicate.

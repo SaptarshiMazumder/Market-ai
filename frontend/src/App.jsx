@@ -1,12 +1,29 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
 
 function App() {
+  // Step 1 mode
+  const [step1Mode, setStep1Mode] = useState('existing') // 'existing' | 'train'
+
   // Model selection
   const [models, setModels] = useState([])
   const [selectedModel, setSelectedModel] = useState(null)
   const [modelsLoading, setModelsLoading] = useState(true)
   const [modelsError, setModelsError] = useState(null)
+
+  // Training form
+  const [trainModelName, setTrainModelName] = useState('')
+  const [trainTriggerWord, setTrainTriggerWord] = useState('TOK')
+  const [trainZip, setTrainZip] = useState(null)
+  const [trainZipName, setTrainZipName] = useState('')
+
+  // Training state
+  const [trainingId, setTrainingId] = useState(null)
+  const [trainingStatus, setTrainingStatus] = useState(null)
+  const [trainingLogs, setTrainingLogs] = useState('')
+  const [trainingError, setTrainingError] = useState(null)
+  const [startingTraining, setStartingTraining] = useState(false)
+  const pollRef = useRef(null)
 
   // Generation form
   const [prompt, setPrompt] = useState('')
@@ -55,6 +72,7 @@ function App() {
     return `${diffDay}d ago`
   }
 
+  // Fetch existing models
   useEffect(() => {
     axios.get('/api/models')
       .then(res => {
@@ -67,8 +85,79 @@ function App() {
       })
   }, [])
 
+  // Poll training status
+  useEffect(() => {
+    if (!trainingId) return
+
+    function poll() {
+      axios.get(`/api/training-status/${trainingId}`)
+        .then(res => {
+          const { status, logs, model_string, error } = res.data
+          setTrainingStatus(status)
+          if (logs) setTrainingLogs(logs)
+
+          if (status === 'succeeded' && model_string) {
+            // Auto-select the new model
+            const name = model_string.split(':')[0]
+            setSelectedModel({
+              model_string: model_string,
+              destination: name,
+            })
+            setTrainingId(null)
+            setStep1Mode('existing')
+            // Refresh model list
+            axios.get('/api/models').then(r => setModels(r.data.models))
+          } else if (status === 'failed' || status === 'canceled') {
+            setTrainingError(error || `Training ${status}`)
+            setTrainingId(null)
+          }
+        })
+        .catch(err => {
+          setTrainingError(err.response?.data?.error || err.message)
+          setTrainingId(null)
+        })
+    }
+
+    poll() // immediate first poll
+    pollRef.current = setInterval(poll, 5000)
+    return () => clearInterval(pollRef.current)
+  }, [trainingId])
+
   const succeededModels = models.filter(m => m.status === 'succeeded' && m.model_string)
   const otherModels = models.filter(m => m.status !== 'succeeded' || !m.model_string)
+
+  function handleZipChange(e) {
+    const file = e.target.files[0]
+    if (file) {
+      setTrainZip(file)
+      setTrainZipName(file.name)
+    }
+  }
+
+  async function handleStartTraining(e) {
+    e.preventDefault()
+    if (!trainModelName.trim() || !trainZip) return
+
+    setStartingTraining(true)
+    setTrainingError(null)
+    setTrainingStatus(null)
+    setTrainingLogs('')
+
+    try {
+      const formData = new FormData()
+      formData.append('model_name', trainModelName.trim().toLowerCase().replace(/\s+/g, '_'))
+      formData.append('trigger_word', trainTriggerWord.trim() || 'TOK')
+      formData.append('images', trainZip)
+
+      const res = await axios.post('/api/train', formData)
+      setTrainingId(res.data.training_id)
+      setTrainingStatus('starting')
+    } catch (err) {
+      setTrainingError(err.response?.data?.error || err.message)
+    } finally {
+      setStartingTraining(false)
+    }
+  }
 
   function handleImageChange(e) {
     const file = e.target.files[0]
@@ -112,6 +201,8 @@ function App() {
     }
   }
 
+  const isTraining = !!trainingId
+
   return (
     <div className="min-h-screen bg-gray-950 text-white">
       <header className="border-b border-gray-800 px-6 py-5">
@@ -120,142 +211,279 @@ function App() {
       </header>
 
       <main className="max-w-4xl mx-auto px-6 py-10">
-        {/* Model Selection */}
+        {/* Step 1 */}
         <section>
-          <h2 className="text-lg font-semibold mb-4 text-gray-300">1. Select a Model</h2>
+          <h2 className="text-lg font-semibold mb-4 text-gray-300">1. Choose a Model</h2>
 
-          {modelsLoading && (
-            <div className="text-center py-10">
-              <div className="inline-block w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-3" />
-              <p className="text-gray-400 text-sm">Fetching models...</p>
-            </div>
-          )}
+          {/* Toggle */}
+          <div className="flex gap-1 mb-6 bg-gray-900 p-1 rounded-lg w-fit">
+            <button
+              onClick={() => setStep1Mode('existing')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                step1Mode === 'existing'
+                  ? 'bg-gray-700 text-white'
+                  : 'text-gray-400 hover:text-gray-300'
+              }`}
+            >
+              Use Existing
+            </button>
+            <button
+              onClick={() => setStep1Mode('train')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                step1Mode === 'train'
+                  ? 'bg-gray-700 text-white'
+                  : 'text-gray-400 hover:text-gray-300'
+              }`}
+            >
+              Train New
+            </button>
+          </div>
 
-          {modelsError && (
-            <div className="bg-red-900/30 border border-red-700 rounded-lg p-4 text-red-300 text-sm">
-              {modelsError}
-            </div>
-          )}
+          {/* Existing Models */}
+          {step1Mode === 'existing' && (
+            <>
+              {modelsLoading && (
+                <div className="text-center py-10">
+                  <div className="inline-block w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-3" />
+                  <p className="text-gray-400 text-sm">Fetching models...</p>
+                </div>
+              )}
 
-          {!modelsLoading && !modelsError && (
-            <div className="space-y-2">
-              {succeededModels.map((model, i) => {
-                const isSelected = selectedModel?.model_string === model.model_string
-                return (
-                  <button
-                    key={i}
-                    onClick={() => setSelectedModel(model)}
-                    className={`w-full text-left p-4 rounded-lg border transition-all ${
-                      isSelected
-                        ? 'border-blue-500 bg-blue-500/10'
-                        : 'border-gray-800 bg-gray-900 hover:border-gray-600'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">{model.destination}</p>
-                        <p className="text-xs text-gray-500 mt-1 font-mono">{model.model_string}</p>
-                        <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-gray-500">
+              {modelsError && (
+                <div className="bg-red-900/30 border border-red-700 rounded-lg p-4 text-red-300 text-sm">
+                  {modelsError}
+                </div>
+              )}
+
+              {!modelsLoading && !modelsError && (
+                <div className="space-y-2">
+                  {succeededModels.map((model, i) => {
+                    const isSelected = selectedModel?.model_string === model.model_string
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => setSelectedModel(model)}
+                        className={`w-full text-left p-4 rounded-lg border transition-all ${
+                          isSelected
+                            ? 'border-blue-500 bg-blue-500/10'
+                            : 'border-gray-800 bg-gray-900 hover:border-gray-600'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
                           <div>
-                            <span className="text-gray-600">ID</span>
-                            <div className="font-mono break-all text-gray-400">{model.id || '-'}</div>
+                            <p className="font-medium">{model.destination}</p>
+                            <p className="text-xs text-gray-500 mt-1 font-mono">{model.model_string}</p>
+                            <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-gray-500">
+                              <div>
+                                <span className="text-gray-600">ID</span>
+                                <div className="font-mono break-all text-gray-400">{model.id || '-'}</div>
+                              </div>
+                              <div>
+                                <span className="text-gray-600">Model</span>
+                                <div className="font-mono break-all text-gray-400">{model.model || '-'}</div>
+                              </div>
+                              <div>
+                                <span className="text-gray-600">Source</span>
+                                <div className="text-gray-400">{model.source || '-'}</div>
+                              </div>
+                              <div>
+                                <span className="text-gray-600">Queued</span>
+                                <div className="text-gray-400">{formatDuration(model.queued_seconds)}</div>
+                              </div>
+                              <div>
+                                <span className="text-gray-600">Running</span>
+                                <div className="text-gray-400">{formatDuration(model.running_seconds)}</div>
+                              </div>
+                              <div>
+                                <span className="text-gray-600">Total</span>
+                                <div className="text-gray-400">{formatDuration(model.total_seconds)}</div>
+                              </div>
+                              <div>
+                                <span className="text-gray-600">Created</span>
+                                <div className="text-gray-400" title={model.created_at || ''}>
+                                  {formatRelativeTime(model.created_at)}
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                          <div>
-                            <span className="text-gray-600">Model</span>
-                            <div className="font-mono break-all text-gray-400">{model.model || '-'}</div>
-                          </div>
-                          <div>
-                            <span className="text-gray-600">Source</span>
-                            <div className="text-gray-400">{model.source || '-'}</div>
-                          </div>
-                          <div>
-                            <span className="text-gray-600">Queued</span>
-                            <div className="text-gray-400">{formatDuration(model.queued_seconds)}</div>
-                          </div>
-                          <div>
-                            <span className="text-gray-600">Running</span>
-                            <div className="text-gray-400">{formatDuration(model.running_seconds)}</div>
-                          </div>
-                          <div>
-                            <span className="text-gray-600">Total</span>
-                            <div className="text-gray-400">{formatDuration(model.total_seconds)}</div>
-                          </div>
-                          <div>
-                            <span className="text-gray-600">Created</span>
-                            <div className="text-gray-400" title={model.created_at || ''}>
-                              {formatRelativeTime(model.created_at)}
+                          <span className="text-xs px-2 py-1 rounded-full bg-green-900/50 text-green-400 border border-green-800">
+                            ready
+                          </span>
+                        </div>
+                      </button>
+                    )
+                  })}
+
+                  {otherModels.map((model, i) => (
+                    <div key={`other-${i}`} className="p-4 rounded-lg border border-gray-800 bg-gray-900 opacity-50">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">{model.destination}</p>
+                          <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-gray-500">
+                            <div>
+                              <span className="text-gray-600">ID</span>
+                              <div className="font-mono break-all text-gray-400">{model.id || '-'}</div>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Model</span>
+                              <div className="font-mono break-all text-gray-400">{model.model || '-'}</div>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Source</span>
+                              <div className="text-gray-400">{model.source || '-'}</div>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Queued</span>
+                              <div className="text-gray-400">{formatDuration(model.queued_seconds)}</div>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Running</span>
+                              <div className="text-gray-400">{formatDuration(model.running_seconds)}</div>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Total</span>
+                              <div className="text-gray-400">{formatDuration(model.total_seconds)}</div>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Created</span>
+                              <div className="text-gray-400" title={model.created_at || ''}>
+                                {formatRelativeTime(model.created_at)}
+                              </div>
                             </div>
                           </div>
                         </div>
+                        <span className={`text-xs px-2 py-1 rounded-full border ${
+                          model.status === 'processing'
+                            ? 'bg-yellow-900/50 text-yellow-400 border-yellow-800'
+                            : 'bg-red-900/50 text-red-400 border-red-800'
+                        }`}>
+                          {model.status}
+                        </span>
                       </div>
-                      <span className="text-xs px-2 py-1 rounded-full bg-green-900/50 text-green-400 border border-green-800">
-                        ready
-                      </span>
                     </div>
-                  </button>
-                )
-              })}
+                  ))}
 
-              {otherModels.map((model, i) => (
-                <div key={`other-${i}`} className="p-4 rounded-lg border border-gray-800 bg-gray-900 opacity-50">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">{model.destination}</p>
-                      <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-gray-500">
-                        <div>
-                          <span className="text-gray-600">ID</span>
-                          <div className="font-mono break-all text-gray-400">{model.id || '-'}</div>
-                        </div>
-                        <div>
-                          <span className="text-gray-600">Model</span>
-                          <div className="font-mono break-all text-gray-400">{model.model || '-'}</div>
-                        </div>
-                        <div>
-                          <span className="text-gray-600">Source</span>
-                          <div className="text-gray-400">{model.source || '-'}</div>
-                        </div>
-                        <div>
-                          <span className="text-gray-600">Queued</span>
-                          <div className="text-gray-400">{formatDuration(model.queued_seconds)}</div>
-                        </div>
-                        <div>
-                          <span className="text-gray-600">Running</span>
-                          <div className="text-gray-400">{formatDuration(model.running_seconds)}</div>
-                        </div>
-                        <div>
-                          <span className="text-gray-600">Total</span>
-                          <div className="text-gray-400">{formatDuration(model.total_seconds)}</div>
-                        </div>
-                        <div>
-                          <span className="text-gray-600">Created</span>
-                          <div className="text-gray-400" title={model.created_at || ''}>
-                            {formatRelativeTime(model.created_at)}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <span className={`text-xs px-2 py-1 rounded-full border ${
-                      model.status === 'processing'
-                        ? 'bg-yellow-900/50 text-yellow-400 border-yellow-800'
-                        : 'bg-red-900/50 text-red-400 border-red-800'
-                    }`}>
-                      {model.status}
-                    </span>
-                  </div>
+                  {succeededModels.length === 0 && otherModels.length === 0 && (
+                    <p className="text-gray-500 text-center py-10">No models found.</p>
+                  )}
                 </div>
-              ))}
-
-              {succeededModels.length === 0 && otherModels.length === 0 && (
-                <p className="text-gray-500 text-center py-10">No models found.</p>
               )}
-            </div>
+            </>
+          )}
+
+          {/* Train New */}
+          {step1Mode === 'train' && (
+            <>
+              {!isTraining && !trainingError && (
+                <form onSubmit={handleStartTraining} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">Model Name</label>
+                    <input
+                      type="text"
+                      value={trainModelName}
+                      onChange={e => setTrainModelName(e.target.value)}
+                      placeholder="e.g. my_product"
+                      className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-blue-500"
+                    />
+                    <p className="text-xs text-gray-600 mt-1">This becomes your model ID on Replicate</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">Trigger Word</label>
+                    <input
+                      type="text"
+                      value={trainTriggerWord}
+                      onChange={e => setTrainTriggerWord(e.target.value)}
+                      placeholder="TOK"
+                      className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-blue-500"
+                    />
+                    <p className="text-xs text-gray-600 mt-1">Use this word in prompts to activate the trained style</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">Training Images (.zip)</label>
+                    <label className="flex items-center justify-center w-full h-32 border-2 border-dashed border-gray-700 rounded-lg cursor-pointer hover:border-gray-500 transition-colors">
+                      <div className="text-center">
+                        {trainZipName ? (
+                          <p className="text-gray-300 text-sm">{trainZipName}</p>
+                        ) : (
+                          <>
+                            <p className="text-gray-500 text-sm">Click to upload .zip</p>
+                            <p className="text-gray-600 text-xs mt-1">ZIP file containing training images</p>
+                          </>
+                        )}
+                      </div>
+                      <input type="file" accept=".zip" onChange={handleZipChange} className="hidden" />
+                    </label>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={startingTraining || !trainModelName.trim() || !trainZip}
+                    className="w-full py-3 px-6 rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-purple-600 hover:bg-purple-500 text-white"
+                  >
+                    {startingTraining ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Starting Training...
+                      </span>
+                    ) : (
+                      'Start Training'
+                    )}
+                  </button>
+                </form>
+              )}
+
+              {/* Training Progress */}
+              {isTraining && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 p-4 rounded-lg border border-purple-800 bg-purple-900/20">
+                    <span className="w-5 h-5 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+                    <div>
+                      <p className="font-medium text-purple-300">Training in progress</p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        Status: <span className="text-purple-300">{trainingStatus}</span>
+                        {' — '}polling every 5s
+                      </p>
+                    </div>
+                  </div>
+
+                  {trainingLogs && (
+                    <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
+                      <p className="text-xs text-gray-500 mb-2">Logs (last 20 lines)</p>
+                      <pre className="text-xs text-gray-400 whitespace-pre-wrap font-mono max-h-64 overflow-y-auto">
+                        {trainingLogs}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Training Error */}
+              {trainingError && !isTraining && (
+                <div className="space-y-3">
+                  <div className="bg-red-900/30 border border-red-700 rounded-lg p-4 text-red-300 text-sm">
+                    {trainingError}
+                  </div>
+                  <button
+                    onClick={() => { setTrainingError(null); setTrainingStatus(null); setTrainingLogs('') }}
+                    className="text-sm text-gray-400 hover:text-gray-300"
+                  >
+                    Try again
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </section>
 
-        {/* Generation Form - only show when model is selected */}
+        {/* Step 2: Generation Form - only show when model is selected */}
         {selectedModel && (
           <section className="mt-10">
-            <h2 className="text-lg font-semibold mb-4 text-gray-300">2. Generate Image</h2>
+            <h2 className="text-lg font-semibold mb-2 text-gray-300">2. Generate Image</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Using: <span className="font-mono text-gray-400">{selectedModel.model_string}</span>
+            </p>
 
             <form onSubmit={handleGenerate} className="space-y-6">
               {/* Prompt */}

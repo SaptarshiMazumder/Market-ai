@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 import replicate
 import requests as http_requests
 from datetime import datetime, timezone
+from services.replicate_models import ensure_model_exists
 
 load_dotenv()
 
@@ -90,6 +91,93 @@ def get_models():
                 models.append(entry)
 
         return jsonify({"models": models})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+FLUX_TRAINER_MODEL = "ostris/flux-dev-lora-trainer"
+FLUX_TRAINER_VERSION = "e440909d3512c31646ee2e0c7d6f6f4923224863a6a10c494606e79fb5844497"
+REPLICATE_OWNER = os.getenv("REPLICATE_OWNER", "saptarshimazumder")
+
+
+@app.route('/api/train', methods=['POST'])
+def start_training():
+    """Start a new Flux LoRA training job."""
+    try:
+        model_name = request.form.get('model_name')
+        trigger_word = request.form.get('trigger_word', 'TOK')
+        zip_file = request.files.get('images')
+
+        if not model_name or not zip_file:
+            return jsonify({"error": "model_name and images (zip) are required"}), 400
+
+        # Save the zip file
+        filename = f"{uuid.uuid4()}_{secure_filename(zip_file.filename)}"
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        zip_file.save(filepath)
+
+        # Ensure destination model exists in Replicate
+        destination, _ = ensure_model_exists(model_name)
+
+        print(f"[Train] Starting training: {destination}")
+        print(f"[Train] Trigger word: {trigger_word}")
+
+        training = replicate.trainings.create(
+            model=FLUX_TRAINER_MODEL,
+            version=FLUX_TRAINER_VERSION,
+            input={
+                "input_images": open(filepath, "rb"),
+                "trigger_word": trigger_word,
+                "steps": 1000,
+                "lora_rank": 16,
+                "optimizer": "adamw8bit",
+                "batch_size": 1,
+                "resolution": "512,768,1024",
+                "autocaption": True,
+                "learning_rate": 0.0004,
+                "caption_dropout_rate": 0.05,
+            },
+            destination=destination
+        )
+
+        print(f"[Train] Training started with ID: {training.id}")
+
+        return jsonify({
+            "training_id": training.id,
+            "destination": destination,
+        })
+
+    except Exception as e:
+        print(f"[Train] Error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/training-status/<training_id>', methods=['GET'])
+def training_status(training_id):
+    """Poll training status."""
+    try:
+        training = replicate.trainings.get(training_id)
+
+        result = {
+            "status": training.status,
+            "logs": "",
+            "model_string": None,
+        }
+
+        if training.logs:
+            log_lines = training.logs.strip().split('\n')
+            result["logs"] = '\n'.join(log_lines[-20:])
+
+        if training.status == "succeeded":
+            output = getattr(training, "output", None) or {}
+            version_str = output.get("version") if isinstance(output, dict) else None
+            result["model_string"] = version_str
+
+        if training.status == "failed":
+            result["error"] = str(getattr(training, "error", "Unknown error"))
+
+        return jsonify(result)
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
