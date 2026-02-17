@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./venv/Scripts/python:*)",
+      "Bash(npm run dev:*)",
+      "Bash(source:*)",
+      "Bash(python:*)",
+      "Bash(tasklist:*)",
+      "Bash(pip show:*)",
+      "Bash(curl:*)",
+      "WebFetch(domain:replicate.com)"
+    ]
+  }
+}
