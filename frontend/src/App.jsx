@@ -22,6 +22,39 @@ function App() {
   const [generatedImage, setGeneratedImage] = useState(null)
   const [genError, setGenError] = useState(null)
 
+  const formatDuration = (seconds) => {
+    if (seconds === null || seconds === undefined || Number.isNaN(seconds)) return '-'
+    if (seconds < 1) return '<1s'
+    const total = Math.floor(seconds)
+    if (total >= 3600) {
+      const h = Math.floor(total / 3600)
+      const m = Math.floor((total % 3600) / 60)
+      return `${h}h ${m}m`
+    }
+    if (total >= 60) {
+      const m = Math.floor(total / 60)
+      const s = total % 60
+      return `${m}m ${s}s`
+    }
+    return `${total}s`
+  }
+
+  const formatRelativeTime = (dateString) => {
+    if (!dateString) return '-'
+    const date = new Date(dateString)
+    if (Number.isNaN(date.getTime())) return '-'
+    const diffMs = Date.now() - date.getTime()
+    const diffSec = Math.floor(diffMs / 1000)
+    if (diffSec < 0) return 'just now'
+    if (diffSec < 60) return `${diffSec}s ago`
+    const diffMin = Math.floor(diffSec / 60)
+    if (diffMin < 60) return `${diffMin}m ago`
+    const diffHr = Math.floor(diffMin / 60)
+    if (diffHr < 24) return `${diffHr}h ago`
+    const diffDay = Math.floor(diffHr / 24)
+    return `${diffDay}d ago`
+  }
+
   useEffect(() => {
     axios.get('/api/models')
       .then(res => {
@@ -34,8 +67,8 @@ function App() {
       })
   }, [])
 
-  const succeededModels = models.filter(m => m.status === 'succeeded')
-  const otherModels = models.filter(m => m.status !== 'succeeded')
+  const succeededModels = models.filter(m => m.status === 'succeeded' && m.model_string)
+  const otherModels = models.filter(m => m.status !== 'succeeded' || !m.model_string)
 
   function handleImageChange(e) {
     const file = e.target.files[0]
@@ -122,6 +155,38 @@ function App() {
                       <div>
                         <p className="font-medium">{model.destination}</p>
                         <p className="text-xs text-gray-500 mt-1 font-mono">{model.model_string}</p>
+                        <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-gray-500">
+                          <div>
+                            <span className="text-gray-600">ID</span>
+                            <div className="font-mono break-all text-gray-400">{model.id || '-'}</div>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Model</span>
+                            <div className="font-mono break-all text-gray-400">{model.model || '-'}</div>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Source</span>
+                            <div className="text-gray-400">{model.source || '-'}</div>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Queued</span>
+                            <div className="text-gray-400">{formatDuration(model.queued_seconds)}</div>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Running</span>
+                            <div className="text-gray-400">{formatDuration(model.running_seconds)}</div>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Total</span>
+                            <div className="text-gray-400">{formatDuration(model.total_seconds)}</div>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Created</span>
+                            <div className="text-gray-400" title={model.created_at || ''}>
+                              {formatRelativeTime(model.created_at)}
+                            </div>
+                          </div>
+                        </div>
                       </div>
                       <span className="text-xs px-2 py-1 rounded-full bg-green-900/50 text-green-400 border border-green-800">
                         ready
@@ -134,7 +199,41 @@ function App() {
               {otherModels.map((model, i) => (
                 <div key={`other-${i}`} className="p-4 rounded-lg border border-gray-800 bg-gray-900 opacity-50">
                   <div className="flex items-center justify-between">
-                    <p className="font-medium">{model.destination}</p>
+                    <div>
+                      <p className="font-medium">{model.destination}</p>
+                      <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-gray-500">
+                        <div>
+                          <span className="text-gray-600">ID</span>
+                          <div className="font-mono break-all text-gray-400">{model.id || '-'}</div>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Model</span>
+                          <div className="font-mono break-all text-gray-400">{model.model || '-'}</div>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Source</span>
+                          <div className="text-gray-400">{model.source || '-'}</div>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Queued</span>
+                          <div className="text-gray-400">{formatDuration(model.queued_seconds)}</div>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Running</span>
+                          <div className="text-gray-400">{formatDuration(model.running_seconds)}</div>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Total</span>
+                          <div className="text-gray-400">{formatDuration(model.total_seconds)}</div>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Created</span>
+                          <div className="text-gray-400" title={model.created_at || ''}>
+                            {formatRelativeTime(model.created_at)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                     <span className={`text-xs px-2 py-1 rounded-full border ${
                       model.status === 'processing'
                         ? 'bg-yellow-900/50 text-yellow-400 border-yellow-800'

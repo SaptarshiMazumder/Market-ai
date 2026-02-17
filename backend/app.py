@@ -6,6 +6,7 @@ import uuid
 from dotenv import load_dotenv
 import replicate
 import requests as http_requests
+from datetime import datetime, timezone
 
 load_dotenv()
 
@@ -25,20 +26,96 @@ def get_models():
         trainings = replicate.trainings.list()
         models = []
 
+        def _parse_dt(value):
+            if not value:
+                return None
+            if isinstance(value, datetime):
+                return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+            if isinstance(value, str):
+                try:
+                    dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+                    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+                except ValueError:
+                    return None
+            return None
+
+        def _duration_seconds(start, end):
+            if not start or not end:
+                return None
+            return max(0.0, (end - start).total_seconds())
+
         for t in trainings:
             if "ostris/flux-dev-lora-trainer" in t.model:
+                created_at = _parse_dt(getattr(t, "created_at", None))
+                started_at = _parse_dt(getattr(t, "started_at", None))
+                completed_at = _parse_dt(getattr(t, "completed_at", None))
+                now = datetime.now(timezone.utc)
+
+                queued_seconds = _duration_seconds(created_at, started_at)
+                running_end = completed_at or (now if started_at else None)
+                total_end = completed_at or (now if created_at else None)
+                running_seconds = _duration_seconds(started_at, running_end)
+                total_seconds = _duration_seconds(created_at, total_end)
+
+                urls = getattr(t, "urls", {}) or {}
+                output = getattr(t, "output", None) or {}
+
+                # The real model string lives in output['version']
+                # e.g. "saptarshimazumder/joystick:8d38a755..."
+                output_version = output.get("version") if isinstance(output, dict) else None
+
+                # Parse the name from the model string (before the colon)
+                display_name = None
+                if output_version and ":" in output_version:
+                    display_name = output_version.split(":")[0]
+
                 entry = {
+                    "id": getattr(t, "id", None),
                     "trainer": t.model,
+                    "model": t.model,
+                    "source": getattr(t, "source", None),
                     "status": t.status,
-                    "destination": t.destination,
+                    "destination": display_name or t.destination,
+                    "created_at": getattr(t, "created_at", None),
+                    "started_at": getattr(t, "started_at", None),
+                    "completed_at": getattr(t, "completed_at", None),
+                    "queued_seconds": queued_seconds,
+                    "running_seconds": running_seconds,
+                    "total_seconds": total_seconds,
+                    "training_url": urls.get("web"),
                 }
-                if t.status == "succeeded":
-                    entry["model_string"] = f"{t.destination}:{t.version}"
-                    entry["version"] = t.version
+                if t.status == "succeeded" and output_version:
+                    entry["model_string"] = output_version
+                    entry["version"] = output_version.split(":")[-1] if ":" in output_version else None
                 models.append(entry)
 
         return jsonify({"models": models})
 
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/debug/trainings', methods=['GET'])
+def debug_trainings():
+    """Dump raw training data to figure out available fields."""
+    try:
+        trainings = replicate.trainings.list()
+        results = []
+        for t in trainings:
+            if "ostris/flux-dev-lora-trainer" in t.model:
+                raw = {}
+                for attr in dir(t):
+                    if attr.startswith('_'):
+                        continue
+                    try:
+                        val = getattr(t, attr)
+                        if callable(val):
+                            continue
+                        raw[attr] = str(val)
+                    except Exception:
+                        pass
+                results.append(raw)
+        return jsonify({"trainings": results})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
