@@ -46,6 +46,14 @@ def init_db():
             error TEXT,
             FOREIGN KEY (batch_job_id) REFERENCES batch_jobs(id)
         );
+
+        CREATE TABLE IF NOT EXISTS templates (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            prompt TEXT NOT NULL,
+            image_filename TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        );
     """)
     conn.commit()
     conn.close()
