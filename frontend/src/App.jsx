@@ -39,6 +39,13 @@ function App() {
   const [generatedImage, setGeneratedImage] = useState(null)
   const [genError, setGenError] = useState(null)
 
+  // Upscale state
+  const [upscaling, setUpscaling] = useState(false)
+  const [upscaledImage, setUpscaledImage] = useState(null)
+  const [upscalePrompt, setUpscalePrompt] = useState(null)
+  const [upscaleNegPrompt, setUpscaleNegPrompt] = useState(null)
+  const [upscaleError, setUpscaleError] = useState(null)
+
   const formatDuration = (seconds) => {
     if (seconds === null || seconds === undefined || Number.isNaN(seconds)) return '-'
     if (seconds < 1) return '<1s'
@@ -179,6 +186,10 @@ function App() {
     setGenerating(true)
     setGenError(null)
     setGeneratedImage(null)
+    setUpscaledImage(null)
+    setUpscalePrompt(null)
+    setUpscaleNegPrompt(null)
+    setUpscaleError(null)
 
     try {
       const formData = new FormData()
@@ -198,6 +209,28 @@ function App() {
       setGenError(err.response?.data?.error || err.message)
     } finally {
       setGenerating(false)
+    }
+  }
+
+  async function handleUpscale() {
+    if (!generatedImage) return
+
+    // Extract filename from URL like "/api/images/uuid.png"
+    const filename = generatedImage.split('/').pop()
+
+    setUpscaling(true)
+    setUpscaleError(null)
+    setUpscaledImage(null)
+
+    try {
+      const res = await axios.post('/api/upscale', { image_filename: filename })
+      setUpscaledImage(res.data.image_url)
+      setUpscalePrompt(res.data.prompt)
+      setUpscaleNegPrompt(res.data.negative_prompt)
+    } catch (err) {
+      setUpscaleError(err.response?.data?.error || err.message)
+    } finally {
+      setUpscaling(false)
     }
   }
 
@@ -621,6 +654,66 @@ function App() {
                   alt="Generated"
                   className="w-full rounded-lg border border-gray-800"
                 />
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* Step 3: Upscale */}
+        {generatedImage && (
+          <section className="mt-10">
+            <h2 className="text-lg font-semibold mb-4 text-gray-300">3. Upscale & Enhance</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Uses Gemini to auto-generate an enhancement prompt, then runs Clarity Upscaler for photorealistic results.
+            </p>
+
+            <button
+              onClick={handleUpscale}
+              disabled={upscaling}
+              className="py-3 px-6 rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-emerald-600 hover:bg-emerald-500 text-white"
+            >
+              {upscaling ? (
+                <span className="flex items-center gap-2">
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Upscaling...
+                </span>
+              ) : (
+                'Upscale & Enhance'
+              )}
+            </button>
+
+            {upscaleError && (
+              <div className="mt-4 bg-red-900/30 border border-red-700 rounded-lg p-4 text-red-300 text-sm">
+                {upscaleError}
+              </div>
+            )}
+
+            {upscaledImage && (
+              <div className="mt-6 space-y-6">
+                {/* Side by side comparison */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-500 mb-2">Original</p>
+                    <img src={generatedImage} alt="Original" className="w-full rounded-lg border border-gray-800" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500 mb-2">Upscaled</p>
+                    <img src={upscaledImage} alt="Upscaled" className="w-full rounded-lg border border-emerald-800" />
+                  </div>
+                </div>
+
+                {/* Gemini prompts used */}
+                <div className="bg-gray-900 border border-gray-800 rounded-lg p-4 space-y-3">
+                  <p className="text-xs text-gray-500 font-medium">Gemini-generated prompts</p>
+                  <div>
+                    <p className="text-xs text-gray-600">Prompt</p>
+                    <p className="text-sm text-gray-300 mt-1">{upscalePrompt}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-600">Negative Prompt</p>
+                    <p className="text-sm text-gray-400 mt-1">{upscaleNegPrompt}</p>
+                  </div>
+                </div>
               </div>
             )}
           </section>
