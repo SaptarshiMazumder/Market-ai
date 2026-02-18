@@ -26,6 +26,9 @@ function App() {
   const pollRef = useRef(null)
 
   // Generation form
+  const [sampleImage, setSampleImage] = useState(null)
+  const [samplePreview, setSamplePreview] = useState(null)
+  const [generatingPrompt, setGeneratingPrompt] = useState(false)
   const [prompt, setPrompt] = useState('')
   const [refImage, setRefImage] = useState(null)
   const [refPreview, setRefPreview] = useState(null)
@@ -209,6 +212,37 @@ function App() {
       setGenError(err.response?.data?.error || err.message)
     } finally {
       setGenerating(false)
+    }
+  }
+
+  function handleSampleImageChange(e) {
+    const file = e.target.files[0]
+    if (file) {
+      setSampleImage(file)
+      setSamplePreview(URL.createObjectURL(file))
+    }
+  }
+
+  function clearSampleImage() {
+    setSampleImage(null)
+    setSamplePreview(null)
+  }
+
+  async function handleGeneratePrompt() {
+    if (!sampleImage) return
+
+    setGeneratingPrompt(true)
+    try {
+      const formData = new FormData()
+      formData.append('sample_image', sampleImage)
+      formData.append('trigger_word', selectedModel?.trigger_word || '')
+
+      const res = await axios.post('/api/generate-prompt', formData)
+      setPrompt(res.data.prompt)
+    } catch (err) {
+      setGenError(err.response?.data?.error || err.message)
+    } finally {
+      setGeneratingPrompt(false)
     }
   }
 
@@ -519,14 +553,60 @@ function App() {
             </p>
 
             <form onSubmit={handleGenerate} className="space-y-6">
-              {/* Prompt */}
+              {/* Sample Image -> Gemini -> Prompt */}
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">Prompt</label>
+                <label className="block text-sm font-medium text-gray-400 mb-2">
+                  Sample Image <span className="text-gray-600">(for AI prompt generation)</span>
+                </label>
+                <div className="flex gap-4 items-start">
+                  {samplePreview ? (
+                    <div className="flex items-start gap-3">
+                      <img src={samplePreview} alt="Sample" className="w-32 h-32 object-cover rounded-lg border border-gray-700" />
+                      <div className="flex flex-col gap-2">
+                        <button
+                          type="button"
+                          onClick={clearSampleImage}
+                          className="text-sm text-red-400 hover:text-red-300"
+                        >
+                          Remove
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleGeneratePrompt}
+                          disabled={generatingPrompt}
+                          className="px-4 py-2 rounded-lg font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-purple-600 hover:bg-purple-500 text-white whitespace-nowrap"
+                        >
+                          {generatingPrompt ? (
+                            <span className="flex items-center gap-2">
+                              <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              Analyzing...
+                            </span>
+                          ) : (
+                            'Generate Prompt'
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <label className="flex items-center justify-center w-full h-32 border-2 border-dashed border-gray-700 rounded-lg cursor-pointer hover:border-gray-500 transition-colors">
+                      <div className="text-center">
+                        <p className="text-gray-500 text-sm">Upload a sample image</p>
+                        <p className="text-gray-600 text-xs mt-1">Gemini will analyze it and craft a prompt</p>
+                      </div>
+                      <input type="file" accept="image/*" onChange={handleSampleImageChange} className="hidden" />
+                    </label>
+                  )}
+                </div>
+              </div>
+
+              {/* Final Prompt (editable) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-2">Prompt <span className="text-gray-600">(edit or write your own)</span></label>
                 <textarea
                   value={prompt}
                   onChange={e => setPrompt(e.target.value)}
-                  placeholder="Describe the image you want to generate..."
-                  rows={3}
+                  placeholder="Your prompt will appear here after generating, or type one manually..."
+                  rows={4}
                   className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-blue-500 resize-none"
                 />
               </div>

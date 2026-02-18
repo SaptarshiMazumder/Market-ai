@@ -295,6 +295,65 @@ def generate_image():
         return jsonify({"error": str(e)}), 500
 
 
+GENERATION_PROMPT_SYSTEM = """You are an expert prompt engineer for Flux, a state-of-the-art AI image generation model fine-tuned with LoRA. Your goal is to produce ad-ready, commercial-grade marketing imagery.
+
+Analyze the provided sample image of a product. Your job is to craft a detailed, optimized prompt that will produce a stunning, photorealistic, professional advertisement image — the kind you'd see in a Nike, Apple, or luxury brand campaign.
+
+Critical requirements:
+- The image MUST feature a real-looking human or avatar naturally interacting with, wearing, holding, or using the product — this is an advertisement, not a product-only shot
+- Choose an appropriate lifestyle context: someone using the product in a real-world scenario (street, studio, gym, outdoors, workspace, etc.)
+- The person should look natural, aspirational, and on-brand for the product category
+
+Prompt guidelines:
+- Write a single detailed prompt paragraph (no bullet points)
+- Describe the product from the image accurately and how the person is interacting with it
+- Specify the model/person: age range, style, pose, expression, wardrobe
+- Include cinematic lighting details: golden hour, studio softbox, natural window light, etc.
+- Specify camera: shot on Canon EOS R5, 85mm lens, shallow depth of field, etc.
+- Include environment and mood: aspirational, energetic, luxurious, minimal, urban, etc.
+- If a trigger word is provided, include it naturally in the prompt to activate the LoRA style
+- Include quality boosters: "8k uhd", "award-winning advertising photography", "editorial", "sharp focus", "professional color grading"
+- Keep it under 250 words
+- Do NOT include negative prompts — just the positive prompt
+
+Respond with ONLY the prompt text, nothing else. No quotes, no labels, no explanation."""
+
+
+@app.route('/api/generate-prompt', methods=['POST'])
+def generate_prompt():
+    """Use Gemini to analyze a sample image and generate an optimized prompt."""
+    try:
+        trigger_word = request.form.get("trigger_word", "")
+        sample_file = request.files.get("sample_image")
+
+        if not sample_file:
+            return jsonify({"error": "sample_image is required"}), 400
+
+        # Save and open the sample image
+        filename = f"{uuid.uuid4()}_{secure_filename(sample_file.filename)}"
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        sample_file.save(filepath)
+
+        img = Image.open(filepath)
+
+        user_input = GENERATION_PROMPT_SYSTEM
+        if trigger_word:
+            user_input += f"\n\nIMPORTANT: Include this trigger word in the prompt: {trigger_word}"
+
+        model = genai.GenerativeModel("gemini-2.0-flash")
+        response = model.generate_content([user_input, img])
+        generated_prompt = response.text.strip()
+
+        print(f"[PromptGen] Trigger: {trigger_word}")
+        print(f"[PromptGen] Output: {generated_prompt}")
+
+        return jsonify({"prompt": generated_prompt})
+
+    except Exception as e:
+        print(f"[PromptGen] Error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 UPSCALER_PROMPT_SYSTEM = """You are an image enhancement specialist. Analyze the provided image and generate a prompt and negative_prompt for an AI upscaler to enhance this image with maximum realism.
 
 Your goals for the prompt:
