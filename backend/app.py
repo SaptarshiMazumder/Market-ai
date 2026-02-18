@@ -91,6 +91,11 @@ def get_models():
                     "total_seconds": total_seconds,
                     "training_url": urls.get("web"),
                 }
+                # Extract trigger word from training input
+                training_input = getattr(t, "input", {}) or {}
+                if isinstance(training_input, dict):
+                    entry["trigger_word"] = training_input.get("trigger_word", "")
+
                 if t.status == "succeeded" and output_version:
                     entry["model_string"] = output_version
                     entry["version"] = output_version.split(":")[-1] if ":" in output_version else None
@@ -303,6 +308,7 @@ Critical requirements:
 - The image MUST feature a real-looking human or avatar naturally interacting with, wearing, holding, or using the product — this is an advertisement, not a product-only shot
 - Choose an appropriate lifestyle context: someone using the product in a real-world scenario (street, studio, gym, outdoors, workspace, etc.)
 - The person should look natural, aspirational, and on-brand for the product category
+- The scale and proportion of the product relative to the human MUST be realistic — e.g., a watch should fit on a wrist, a shoe should be foot-sized, a phone should be hand-sized. Never exaggerate or shrink the product unnaturally
 
 Prompt guidelines:
 - Write a single detailed prompt paragraph (no bullet points)
@@ -311,7 +317,7 @@ Prompt guidelines:
 - Include cinematic lighting details: golden hour, studio softbox, natural window light, etc.
 - Specify camera: shot on Canon EOS R5, 85mm lens, shallow depth of field, etc.
 - Include environment and mood: aspirational, energetic, luxurious, minimal, urban, etc.
-- If a trigger word is provided, include it naturally in the prompt to activate the LoRA style
+- If a trigger word is provided, you MUST use ONLY that trigger word to refer to the product throughout the entire prompt — never describe the product by its actual name or type, always substitute the trigger word instead. This is critical for activating the LoRA fine-tune
 - Include quality boosters: "8k uhd", "award-winning advertising photography", "editorial", "sharp focus", "professional color grading"
 - Keep it under 250 words
 - Do NOT include negative prompts — just the positive prompt
@@ -338,7 +344,7 @@ def generate_prompt():
 
         user_input = GENERATION_PROMPT_SYSTEM
         if trigger_word:
-            user_input += f"\n\nIMPORTANT: Include this trigger word in the prompt: {trigger_word}"
+            user_input += f"\n\nIMPORTANT: The trigger word is \"{trigger_word}\". Use ONLY this word to refer to the product — never use the product's actual name or category. For example, instead of 'a sleek wireless headphone', write 'a sleek {trigger_word}'."
 
         model = genai.GenerativeModel("gemini-2.0-flash")
         response = model.generate_content([user_input, img])

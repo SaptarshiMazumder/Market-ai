@@ -185,7 +185,54 @@ function App() {
   async function handleGenerate(e) {
     e.preventDefault()
     if (!selectedModel || !prompt.trim()) return
+    autoGenerate(prompt)
+  }
 
+  function handleSampleImageChange(e) {
+    const file = e.target.files[0]
+    if (file) {
+      setSampleImage(file)
+      setSamplePreview(URL.createObjectURL(file))
+      // Auto-trigger prompt generation
+      autoGeneratePrompt(file)
+    }
+  }
+
+  function clearSampleImage() {
+    setSampleImage(null)
+    setSamplePreview(null)
+  }
+
+  async function autoGeneratePrompt(file) {
+    setGeneratingPrompt(true)
+    setGenError(null)
+    try {
+      const formData = new FormData()
+      formData.append('sample_image', file)
+      formData.append('trigger_word', selectedModel?.trigger_word || '')
+
+      const res = await axios.post('/api/generate-prompt', formData)
+      setPrompt(res.data.prompt)
+      // Auto-trigger image generation
+      autoGenerate(res.data.prompt)
+    } catch (err) {
+      setGenError(err.response?.data?.error || err.message)
+      setGeneratingPrompt(false)
+    }
+  }
+
+  async function handleGeneratePrompt() {
+    if (!sampleImage) return
+    autoGeneratePrompt(sampleImage)
+  }
+
+  async function autoGenerate(promptText) {
+    if (!selectedModel || !promptText.trim()) {
+      setGeneratingPrompt(false)
+      return
+    }
+
+    setGeneratingPrompt(false)
     setGenerating(true)
     setGenError(null)
     setGeneratedImage(null)
@@ -197,7 +244,7 @@ function App() {
     try {
       const formData = new FormData()
       formData.append('model_string', selectedModel.model_string)
-      formData.append('prompt', prompt)
+      formData.append('prompt', promptText)
       formData.append('lora_scale', loraScale)
       formData.append('prompt_strength', promptStrength)
       formData.append('guidance_scale', guidanceScale)
@@ -208,49 +255,18 @@ function App() {
 
       const res = await axios.post('/api/generate', formData)
       setGeneratedImage(res.data.image_url)
+      // Auto-trigger upscale
+      autoUpscale(res.data.image_url)
     } catch (err) {
       setGenError(err.response?.data?.error || err.message)
-    } finally {
       setGenerating(false)
     }
   }
 
-  function handleSampleImageChange(e) {
-    const file = e.target.files[0]
-    if (file) {
-      setSampleImage(file)
-      setSamplePreview(URL.createObjectURL(file))
-    }
-  }
+  async function autoUpscale(imageUrl) {
+    setGenerating(false)
 
-  function clearSampleImage() {
-    setSampleImage(null)
-    setSamplePreview(null)
-  }
-
-  async function handleGeneratePrompt() {
-    if (!sampleImage) return
-
-    setGeneratingPrompt(true)
-    try {
-      const formData = new FormData()
-      formData.append('sample_image', sampleImage)
-      formData.append('trigger_word', selectedModel?.trigger_word || '')
-
-      const res = await axios.post('/api/generate-prompt', formData)
-      setPrompt(res.data.prompt)
-    } catch (err) {
-      setGenError(err.response?.data?.error || err.message)
-    } finally {
-      setGeneratingPrompt(false)
-    }
-  }
-
-  async function handleUpscale() {
-    if (!generatedImage) return
-
-    // Extract filename from URL like "/api/images/uuid.png"
-    const filename = generatedImage.split('/').pop()
+    const filename = imageUrl.split('/').pop()
 
     setUpscaling(true)
     setUpscaleError(null)
@@ -266,6 +282,11 @@ function App() {
     } finally {
       setUpscaling(false)
     }
+  }
+
+  async function handleUpscale() {
+    if (!generatedImage) return
+    autoUpscale(generatedImage)
   }
 
   const isTraining = !!trainingId
@@ -599,6 +620,37 @@ function App() {
                 </div>
               </div>
 
+              {/* Pipeline Status */}
+              {(generatingPrompt || generating || upscaling) && (
+                <div className="flex items-center gap-3 p-4 rounded-lg border border-blue-800 bg-blue-900/20">
+                  <span className="w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin shrink-0" />
+                  <div>
+                    <p className="font-medium text-blue-300">
+                      {generatingPrompt && 'Generating prompt with Gemini...'}
+                      {generating && 'Generating image with Flux LoRA...'}
+                      {upscaling && 'Upscaling & enhancing image...'}
+                    </p>
+                    <div className="flex gap-2 mt-2">
+                      {[
+                        { label: 'Prompt', done: !generatingPrompt && (prompt || generating || upscaling), active: generatingPrompt },
+                        { label: 'Generate', done: !generating && (generatedImage || upscaling), active: generating },
+                        { label: 'Upscale', done: !!upscaledImage, active: upscaling },
+                      ].map((step, i) => (
+                        <span key={i} className={`text-xs px-2 py-0.5 rounded-full border ${
+                          step.active
+                            ? 'border-blue-500 bg-blue-500/20 text-blue-300'
+                            : step.done
+                              ? 'border-green-700 bg-green-900/30 text-green-400'
+                              : 'border-gray-700 bg-gray-800/50 text-gray-500'
+                        }`}>
+                          {step.done && !step.active ? '\u2713 ' : ''}{step.label}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Final Prompt (editable) */}
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">Prompt <span className="text-gray-600">(edit or write your own)</span></label>
@@ -770,8 +822,8 @@ function App() {
 
             {upscaledImage && (
               <div className="mt-6 space-y-6">
-                {/* Side by side comparison */}
-                <div className="grid grid-cols-2 gap-4">
+                {/* Stacked comparison */}
+                <div className="space-y-4">
                   <div>
                     <p className="text-sm text-gray-500 mb-2">Original</p>
                     <img src={generatedImage} alt="Original" className="w-full rounded-lg border border-gray-800" />
