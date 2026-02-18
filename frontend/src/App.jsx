@@ -25,16 +25,24 @@ function App() {
   const [startingTraining, setStartingTraining] = useState(false)
   const pollRef = useRef(null)
 
+  // Templates
+  const [templates, setTemplates] = useState([])
+  const [templatesLoading, setTemplatesLoading] = useState(true)
+  const [selectedTemplate, setSelectedTemplate] = useState(null)
+  const [showAddTemplate, setShowAddTemplate] = useState(false)
+  const [newTemplateName, setNewTemplateName] = useState('')
+  const [newTemplatePrompt, setNewTemplatePrompt] = useState('')
+  const [newTemplateImage, setNewTemplateImage] = useState(null)
+  const [newTemplateImagePreview, setNewTemplateImagePreview] = useState(null)
+  const [savingTemplate, setSavingTemplate] = useState(false)
+
   // Generation form
-  const [sampleImage, setSampleImage] = useState(null)
-  const [samplePreview, setSamplePreview] = useState(null)
-  const [generatingPrompt, setGeneratingPrompt] = useState(false)
   const [prompt, setPrompt] = useState('')
   const [refImage, setRefImage] = useState(null)
   const [refPreview, setRefPreview] = useState(null)
-  const [loraScale, setLoraScale] = useState(1.0)
+  const [loraScale, setLoraScale] = useState(1.1)
   const [promptStrength, setPromptStrength] = useState(0.8)
-  const [guidanceScale, setGuidanceScale] = useState(3.5)
+  const [guidanceScale, setGuidanceScale] = useState(3)
   const [numSteps, setNumSteps] = useState(28)
 
   // Generation state
@@ -95,6 +103,16 @@ function App() {
       })
   }, [])
 
+  // Fetch templates
+  useEffect(() => {
+    axios.get('/api/templates')
+      .then(res => {
+        setTemplates(res.data.templates)
+        setTemplatesLoading(false)
+      })
+      .catch(() => setTemplatesLoading(false))
+  }, [])
+
   // Poll training status
   useEffect(() => {
     if (!trainingId) return
@@ -102,20 +120,19 @@ function App() {
     function poll() {
       axios.get(`/api/training-status/${trainingId}`)
         .then(res => {
-          const { status, logs, model_string, error } = res.data
+          const { status, logs, model_string, trigger_word, error } = res.data
           setTrainingStatus(status)
           if (logs) setTrainingLogs(logs)
 
           if (status === 'succeeded' && model_string) {
-            // Auto-select the new model
             const name = model_string.split(':')[0]
             setSelectedModel({
               model_string: model_string,
               destination: name,
+              trigger_word: trigger_word || '',
             })
             setTrainingId(null)
             setStep1Mode('existing')
-            // Refresh model list
             axios.get('/api/models').then(r => setModels(r.data.models))
           } else if (status === 'failed' || status === 'canceled') {
             setTrainingError(error || `Training ${status}`)
@@ -128,10 +145,18 @@ function App() {
         })
     }
 
-    poll() // immediate first poll
+    poll()
     pollRef.current = setInterval(poll, 5000)
     return () => clearInterval(pollRef.current)
   }, [trainingId])
+
+  // When a template is selected, inject prompt with trigger word replaced
+  useEffect(() => {
+    if (!selectedTemplate) return
+    const triggerWord = selectedModel?.trigger_word || 'TOK'
+    const resolved = selectedTemplate.prompt.replace(/trigger_keyword/gi, triggerWord)
+    setPrompt(resolved)
+  }, [selectedTemplate, selectedModel])
 
   const succeededModels = models.filter(m => m.status === 'succeeded' && m.model_string)
   const otherModels = models.filter(m => m.status !== 'succeeded' || !m.model_string)
@@ -188,51 +213,9 @@ function App() {
     autoGenerate(prompt)
   }
 
-  function handleSampleImageChange(e) {
-    const file = e.target.files[0]
-    if (file) {
-      setSampleImage(file)
-      setSamplePreview(URL.createObjectURL(file))
-      // Auto-trigger prompt generation
-      autoGeneratePrompt(file)
-    }
-  }
-
-  function clearSampleImage() {
-    setSampleImage(null)
-    setSamplePreview(null)
-  }
-
-  async function autoGeneratePrompt(file) {
-    setGeneratingPrompt(true)
-    setGenError(null)
-    try {
-      const formData = new FormData()
-      formData.append('sample_image', file)
-      formData.append('trigger_word', selectedModel?.trigger_word || '')
-
-      const res = await axios.post('/api/generate-prompt', formData)
-      setPrompt(res.data.prompt)
-      // Auto-trigger image generation
-      autoGenerate(res.data.prompt)
-    } catch (err) {
-      setGenError(err.response?.data?.error || err.message)
-      setGeneratingPrompt(false)
-    }
-  }
-
-  async function handleGeneratePrompt() {
-    if (!sampleImage) return
-    autoGeneratePrompt(sampleImage)
-  }
-
   async function autoGenerate(promptText) {
-    if (!selectedModel || !promptText.trim()) {
-      setGeneratingPrompt(false)
-      return
-    }
+    if (!selectedModel || !promptText.trim()) return
 
-    setGeneratingPrompt(false)
     setGenerating(true)
     setGenError(null)
     setGeneratedImage(null)
@@ -255,7 +238,6 @@ function App() {
 
       const res = await axios.post('/api/generate', formData)
       setGeneratedImage(res.data.image_url)
-      // Auto-trigger upscale
       autoUpscale(res.data.image_url)
     } catch (err) {
       setGenError(err.response?.data?.error || err.message)
@@ -289,6 +271,53 @@ function App() {
     autoUpscale(generatedImage)
   }
 
+  // Template management
+  function handleNewTemplateImageChange(e) {
+    const file = e.target.files[0]
+    if (file) {
+      setNewTemplateImage(file)
+      setNewTemplateImagePreview(URL.createObjectURL(file))
+    }
+  }
+
+  async function handleSaveTemplate(e) {
+    e.preventDefault()
+    if (!newTemplateName.trim() || !newTemplatePrompt.trim() || !newTemplateImage) return
+
+    setSavingTemplate(true)
+    try {
+      const formData = new FormData()
+      formData.append('name', newTemplateName.trim())
+      formData.append('prompt', newTemplatePrompt.trim())
+      formData.append('image', newTemplateImage)
+
+      const res = await axios.post('/api/templates', formData)
+      setTemplates(prev => [res.data, ...prev])
+      setNewTemplateName('')
+      setNewTemplatePrompt('')
+      setNewTemplateImage(null)
+      setNewTemplateImagePreview(null)
+      setShowAddTemplate(false)
+    } catch (err) {
+      alert(err.response?.data?.error || err.message)
+    } finally {
+      setSavingTemplate(false)
+    }
+  }
+
+  async function handleDeleteTemplate(templateId) {
+    try {
+      await axios.delete(`/api/templates/${templateId}`)
+      setTemplates(prev => prev.filter(t => t.id !== templateId))
+      if (selectedTemplate?.id === templateId) {
+        setSelectedTemplate(null)
+        setPrompt('')
+      }
+    } catch (err) {
+      alert(err.response?.data?.error || err.message)
+    }
+  }
+
   const isTraining = !!trainingId
 
   return (
@@ -303,7 +332,6 @@ function App() {
         <section>
           <h2 className="text-lg font-semibold mb-4 text-gray-300">1. Choose a Model</h2>
 
-          {/* Toggle */}
           <div className="flex gap-1 mb-6 bg-gray-900 p-1 rounded-lg w-fit">
             <button
               onClick={() => setStep1Mode('existing')}
@@ -327,7 +355,6 @@ function App() {
             </button>
           </div>
 
-          {/* Existing Models */}
           {step1Mode === 'existing' && (
             <>
               {modelsLoading && (
@@ -361,26 +388,17 @@ function App() {
                           <div>
                             <p className="font-medium">{model.destination}</p>
                             <p className="text-xs text-gray-500 mt-1 font-mono">{model.model_string}</p>
+                            {model.trigger_word && (
+                              <p className="text-xs text-blue-400 mt-1">Trigger: <span className="font-mono">{model.trigger_word}</span></p>
+                            )}
                             <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-gray-500">
                               <div>
                                 <span className="text-gray-600">ID</span>
                                 <div className="font-mono break-all text-gray-400">{model.id || '-'}</div>
                               </div>
                               <div>
-                                <span className="text-gray-600">Model</span>
-                                <div className="font-mono break-all text-gray-400">{model.model || '-'}</div>
-                              </div>
-                              <div>
                                 <span className="text-gray-600">Source</span>
                                 <div className="text-gray-400">{model.source || '-'}</div>
-                              </div>
-                              <div>
-                                <span className="text-gray-600">Queued</span>
-                                <div className="text-gray-400">{formatDuration(model.queued_seconds)}</div>
-                              </div>
-                              <div>
-                                <span className="text-gray-600">Running</span>
-                                <div className="text-gray-400">{formatDuration(model.running_seconds)}</div>
                               </div>
                               <div>
                                 <span className="text-gray-600">Total</span>
@@ -413,24 +431,8 @@ function App() {
                               <div className="font-mono break-all text-gray-400">{model.id || '-'}</div>
                             </div>
                             <div>
-                              <span className="text-gray-600">Model</span>
-                              <div className="font-mono break-all text-gray-400">{model.model || '-'}</div>
-                            </div>
-                            <div>
-                              <span className="text-gray-600">Source</span>
-                              <div className="text-gray-400">{model.source || '-'}</div>
-                            </div>
-                            <div>
-                              <span className="text-gray-600">Queued</span>
-                              <div className="text-gray-400">{formatDuration(model.queued_seconds)}</div>
-                            </div>
-                            <div>
-                              <span className="text-gray-600">Running</span>
-                              <div className="text-gray-400">{formatDuration(model.running_seconds)}</div>
-                            </div>
-                            <div>
-                              <span className="text-gray-600">Total</span>
-                              <div className="text-gray-400">{formatDuration(model.total_seconds)}</div>
+                              <span className="text-gray-600">Status</span>
+                              <div className="text-gray-400">{model.status}</div>
                             </div>
                             <div>
                               <span className="text-gray-600">Created</span>
@@ -459,7 +461,6 @@ function App() {
             </>
           )}
 
-          {/* Train New */}
           {step1Mode === 'train' && (
             <>
               {!isTraining && !trainingError && (
@@ -522,7 +523,6 @@ function App() {
                 </form>
               )}
 
-              {/* Training Progress */}
               {isTraining && (
                 <div className="space-y-4">
                   <div className="flex items-center gap-3 p-4 rounded-lg border border-purple-800 bg-purple-900/20">
@@ -547,7 +547,6 @@ function App() {
                 </div>
               )}
 
-              {/* Training Error */}
               {trainingError && !isTraining && (
                 <div className="space-y-3">
                   <div className="bg-red-900/30 border border-red-700 rounded-lg p-4 text-red-300 text-sm">
@@ -565,74 +564,157 @@ function App() {
           )}
         </section>
 
-        {/* Step 2: Generation Form - only show when model is selected */}
+        {/* Step 2: Choose a Template */}
         {selectedModel && (
           <section className="mt-10">
-            <h2 className="text-lg font-semibold mb-2 text-gray-300">2. Generate Image</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-300">2. Choose a Prompt Template</h2>
+              <button
+                onClick={() => setShowAddTemplate(!showAddTemplate)}
+                className="text-sm px-3 py-1.5 rounded-lg border border-gray-700 text-gray-400 hover:text-white hover:border-gray-500 transition-all"
+              >
+                {showAddTemplate ? 'Cancel' : '+ Add Template'}
+              </button>
+            </div>
+            <p className="text-sm text-gray-500 mb-4">
+              Each template has a preset prompt. <span className="text-gray-400 font-mono">trigger_keyword</span> is auto-replaced with your model's trigger word
+              {selectedModel.trigger_word && (
+                <span> (<span className="text-blue-400 font-mono">{selectedModel.trigger_word}</span>)</span>
+              )}
+            </p>
+
+            {/* Add Template Form */}
+            {showAddTemplate && (
+              <form onSubmit={handleSaveTemplate} className="mb-6 p-4 rounded-lg border border-gray-800 bg-gray-900 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-2">Template Name</label>
+                  <input
+                    type="text"
+                    value={newTemplateName}
+                    onChange={e => setNewTemplateName(e.target.value)}
+                    placeholder="e.g. Urban Street Style"
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-2">
+                    Prompt <span className="text-gray-600">(use <span className="font-mono">trigger_keyword</span> where the product goes)</span>
+                  </label>
+                  <textarea
+                    value={newTemplatePrompt}
+                    onChange={e => setNewTemplatePrompt(e.target.value)}
+                    placeholder="A confident woman wearing trigger_keyword while walking down a sunlit city street..."
+                    rows={4}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-blue-500 resize-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-2">Preview Image</label>
+                  {newTemplateImagePreview ? (
+                    <div className="flex items-start gap-3">
+                      <img src={newTemplateImagePreview} alt="Preview" className="w-32 h-32 object-cover rounded-lg border border-gray-700" />
+                      <button
+                        type="button"
+                        onClick={() => { setNewTemplateImage(null); setNewTemplateImagePreview(null) }}
+                        className="text-sm text-red-400 hover:text-red-300"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex items-center justify-center w-full h-24 border-2 border-dashed border-gray-700 rounded-lg cursor-pointer hover:border-gray-500 transition-colors">
+                      <p className="text-gray-500 text-sm">Click to upload preview image</p>
+                      <input type="file" accept="image/*" onChange={handleNewTemplateImageChange} className="hidden" />
+                    </label>
+                  )}
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={savingTemplate || !newTemplateName.trim() || !newTemplatePrompt.trim() || !newTemplateImage}
+                  className="w-full py-2.5 px-6 rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-purple-600 hover:bg-purple-500 text-white text-sm"
+                >
+                  {savingTemplate ? 'Saving...' : 'Save Template'}
+                </button>
+              </form>
+            )}
+
+            {/* Template Grid */}
+            {templatesLoading ? (
+              <div className="text-center py-8">
+                <div className="inline-block w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-2" />
+                <p className="text-gray-500 text-sm">Loading templates...</p>
+              </div>
+            ) : templates.length === 0 ? (
+              <div className="text-center py-10 border-2 border-dashed border-gray-800 rounded-lg">
+                <p className="text-gray-500">No templates yet. Add one above to get started.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {templates.map(t => {
+                  const isSelected = selectedTemplate?.id === t.id
+                  return (
+                    <div
+                      key={t.id}
+                      className={`relative group rounded-lg border overflow-hidden cursor-pointer transition-all ${
+                        isSelected
+                          ? 'border-blue-500 ring-1 ring-blue-500/50'
+                          : 'border-gray-800 hover:border-gray-600'
+                      }`}
+                      onClick={() => setSelectedTemplate(t)}
+                    >
+                      <img
+                        src={t.image_url}
+                        alt={t.name}
+                        className="w-full aspect-square object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                      <div className="absolute bottom-0 left-0 right-0 p-3">
+                        <p className="text-sm font-medium text-white truncate">{t.name}</p>
+                        <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">{t.prompt}</p>
+                      </div>
+                      {isSelected && (
+                        <div className="absolute top-2 right-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+                          <span className="text-white text-xs">&#10003;</span>
+                        </div>
+                      )}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDeleteTemplate(t.id) }}
+                        className="absolute top-2 left-2 w-6 h-6 bg-red-600/80 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Delete template"
+                      >
+                        <span className="text-white text-xs">&times;</span>
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* Step 3: Generate Image */}
+        {selectedModel && (
+          <section className="mt-10">
+            <h2 className="text-lg font-semibold mb-2 text-gray-300">3. Generate Image</h2>
             <p className="text-sm text-gray-500 mb-4">
               Using: <span className="font-mono text-gray-400">{selectedModel.model_string}</span>
             </p>
 
             <form onSubmit={handleGenerate} className="space-y-6">
-              {/* Sample Image -> Gemini -> Prompt */}
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Sample Image <span className="text-gray-600">(for AI prompt generation)</span>
-                </label>
-                <div className="flex gap-4 items-start">
-                  {samplePreview ? (
-                    <div className="flex items-start gap-3">
-                      <img src={samplePreview} alt="Sample" className="w-32 h-32 object-cover rounded-lg border border-gray-700" />
-                      <div className="flex flex-col gap-2">
-                        <button
-                          type="button"
-                          onClick={clearSampleImage}
-                          className="text-sm text-red-400 hover:text-red-300"
-                        >
-                          Remove
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleGeneratePrompt}
-                          disabled={generatingPrompt}
-                          className="px-4 py-2 rounded-lg font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-purple-600 hover:bg-purple-500 text-white whitespace-nowrap"
-                        >
-                          {generatingPrompt ? (
-                            <span className="flex items-center gap-2">
-                              <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                              Analyzing...
-                            </span>
-                          ) : (
-                            'Generate Prompt'
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <label className="flex items-center justify-center w-full h-32 border-2 border-dashed border-gray-700 rounded-lg cursor-pointer hover:border-gray-500 transition-colors">
-                      <div className="text-center">
-                        <p className="text-gray-500 text-sm">Upload a sample image</p>
-                        <p className="text-gray-600 text-xs mt-1">Gemini will analyze it and craft a prompt</p>
-                      </div>
-                      <input type="file" accept="image/*" onChange={handleSampleImageChange} className="hidden" />
-                    </label>
-                  )}
-                </div>
-              </div>
-
               {/* Pipeline Status */}
-              {(generatingPrompt || generating || upscaling) && (
+              {(generating || upscaling) && (
                 <div className="flex items-center gap-3 p-4 rounded-lg border border-blue-800 bg-blue-900/20">
                   <span className="w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin shrink-0" />
                   <div>
                     <p className="font-medium text-blue-300">
-                      {generatingPrompt && 'Generating prompt with Gemini...'}
                       {generating && 'Generating image with Flux LoRA...'}
                       {upscaling && 'Upscaling & enhancing image...'}
                     </p>
                     <div className="flex gap-2 mt-2">
                       {[
-                        { label: 'Prompt', done: !generatingPrompt && (prompt || generating || upscaling), active: generatingPrompt },
                         { label: 'Generate', done: !generating && (generatedImage || upscaling), active: generating },
                         { label: 'Upscale', done: !!upscaledImage, active: upscaling },
                       ].map((step, i) => (
@@ -651,13 +733,18 @@ function App() {
                 </div>
               )}
 
-              {/* Final Prompt (editable) */}
+              {/* Prompt (editable, pre-filled from template) */}
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">Prompt <span className="text-gray-600">(edit or write your own)</span></label>
+                <label className="block text-sm font-medium text-gray-400 mb-2">
+                  Prompt
+                  {selectedTemplate && (
+                    <span className="text-gray-600 ml-2">(from template: {selectedTemplate.name})</span>
+                  )}
+                </label>
                 <textarea
                   value={prompt}
                   onChange={e => setPrompt(e.target.value)}
-                  placeholder="Your prompt will appear here after generating, or type one manually..."
+                  placeholder="Select a template above, or type your prompt manually..."
                   rows={4}
                   className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-blue-500 resize-none"
                 />
@@ -770,14 +857,12 @@ function App() {
               </button>
             </form>
 
-            {/* Error */}
             {genError && (
               <div className="mt-6 bg-red-900/30 border border-red-700 rounded-lg p-4 text-red-300 text-sm">
                 {genError}
               </div>
             )}
 
-            {/* Result */}
             {generatedImage && (
               <div className="mt-8">
                 <h3 className="text-lg font-semibold text-gray-300 mb-4">Result</h3>
@@ -791,10 +876,10 @@ function App() {
           </section>
         )}
 
-        {/* Step 3: Upscale */}
+        {/* Step 4: Upscale */}
         {generatedImage && (
           <section className="mt-10">
-            <h2 className="text-lg font-semibold mb-4 text-gray-300">3. Upscale & Enhance</h2>
+            <h2 className="text-lg font-semibold mb-4 text-gray-300">4. Upscale & Enhance</h2>
             <p className="text-sm text-gray-500 mb-4">
               Uses Gemini to auto-generate an enhancement prompt, then runs Clarity Upscaler for photorealistic results.
             </p>
@@ -822,7 +907,6 @@ function App() {
 
             {upscaledImage && (
               <div className="mt-6 space-y-6">
-                {/* Stacked comparison */}
                 <div className="space-y-4">
                   <div>
                     <p className="text-sm text-gray-500 mb-2">Original</p>
@@ -834,7 +918,6 @@ function App() {
                   </div>
                 </div>
 
-                {/* Gemini prompts used */}
                 <div className="bg-gray-900 border border-gray-800 rounded-lg p-4 space-y-3">
                   <p className="text-xs text-gray-500 font-medium">Gemini-generated prompts</p>
                   <div>

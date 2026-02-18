@@ -3,6 +3,7 @@ from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import os
 import uuid
+import sqlite3
 from dotenv import load_dotenv
 import replicate
 import requests as http_requests
@@ -22,8 +23,35 @@ CORS(app)
 
 UPLOAD_FOLDER = 'uploads'
 GENERATED_FOLDER = 'generated'
+TEMPLATE_IMAGES_FOLDER = 'template_images'
+DB_PATH = 'market_ai.db'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(GENERATED_FOLDER, exist_ok=True)
+os.makedirs(TEMPLATE_IMAGES_FOLDER, exist_ok=True)
+
+
+def get_db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def init_db():
+    conn = get_db()
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS templates (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            prompt TEXT NOT NULL,
+            image_filename TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+
+init_db()
 
 
 @app.route('/api/models', methods=['GET'])
@@ -219,6 +247,111 @@ def debug_trainings():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/api/templates', methods=['GET'])
+def list_templates():
+    """List all prompt templates."""
+    try:
+        conn = get_db()
+        rows = conn.execute(
+            "SELECT * FROM templates ORDER BY created_at DESC"
+        ).fetchall()
+        conn.close()
+        templates = []
+        for r in rows:
+            templates.append({
+                "id": r["id"],
+                "name": r["name"],
+                "prompt": r["prompt"],
+                "image_url": f"/api/template-images/{r['image_filename']}",
+                "created_at": r["created_at"],
+            })
+        return jsonify({"templates": templates})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/templates', methods=['POST'])
+def create_template():
+    """Create a new prompt template with an image and prompt containing trigger_keyword."""
+    try:
+        name = request.form.get('name')
+        prompt_text = request.form.get('prompt')
+        image_file = request.files.get('image')
+
+        if not name or not prompt_text or not image_file:
+            return jsonify({"error": "name, prompt, and image are required"}), 400
+
+        template_id = str(uuid.uuid4())
+        ext = os.path.splitext(secure_filename(image_file.filename))[1] or '.png'
+        image_filename = f"{template_id}{ext}"
+        image_path = os.path.join(TEMPLATE_IMAGES_FOLDER, image_filename)
+        image_file.save(image_path)
+
+        created_at = datetime.now(timezone.utc).isoformat()
+
+        conn = get_db()
+        conn.execute(
+            "INSERT INTO templates (id, name, prompt, image_filename, created_at) VALUES (?, ?, ?, ?, ?)",
+            (template_id, name.strip(), prompt_text.strip(), image_filename, created_at),
+        )
+        conn.commit()
+        conn.close()
+
+        print(f"[Template] Created: {name} (id={template_id})")
+
+        return jsonify({
+            "id": template_id,
+            "name": name.strip(),
+            "prompt": prompt_text.strip(),
+            "image_url": f"/api/template-images/{image_filename}",
+            "created_at": created_at,
+        })
+
+    except Exception as e:
+        print(f"[Template] Error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/templates/<template_id>', methods=['DELETE'])
+def delete_template(template_id):
+    """Delete a prompt template."""
+    try:
+        conn = get_db()
+        row = conn.execute(
+            "SELECT image_filename FROM templates WHERE id = ?", (template_id,)
+        ).fetchone()
+
+        if not row:
+            conn.close()
+            return jsonify({"error": "Template not found"}), 404
+
+        image_path = os.path.join(TEMPLATE_IMAGES_FOLDER, row["image_filename"])
+        if os.path.exists(image_path):
+            os.remove(image_path)
+
+        conn.execute("DELETE FROM templates WHERE id = ?", (template_id,))
+        conn.commit()
+        conn.close()
+
+        print(f"[Template] Deleted: {template_id}")
+        return jsonify({"success": True})
+
+    except Exception as e:
+        print(f"[Template] Error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/template-images/<filename>', methods=['GET'])
+def serve_template_image(filename):
+    """Serve a template preview image."""
+    filepath = os.path.join(TEMPLATE_IMAGES_FOLDER, secure_filename(filename))
+    if not os.path.exists(filepath):
+        return jsonify({"error": "Image not found"}), 404
+    ext = os.path.splitext(filepath)[1].lower()
+    mimetypes = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp"}
+    return send_file(filepath, mimetype=mimetypes.get(ext, "application/octet-stream"))
+
+
 @app.route('/api/generate', methods=['POST'])
 def generate_image():
     """Generate an image using a trained Flux LoRA model."""
@@ -229,7 +362,7 @@ def generate_image():
             prompt = request.form.get('prompt')
             lora_scale = float(request.form.get('lora_scale', 1.0))
             prompt_strength = float(request.form.get('prompt_strength', 0.8))
-            guidance_scale = float(request.form.get('guidance_scale', 3.5))
+            guidance_scale = float(request.form.get('guidance_scale', 3))
             num_inference_steps = int(request.form.get('num_inference_steps', 28))
             width = int(request.form.get('width', 1024))
             height = int(request.form.get('height', 1024))
@@ -240,7 +373,7 @@ def generate_image():
             prompt = data.get('prompt')
             lora_scale = float(data.get('lora_scale', 1.0))
             prompt_strength = float(data.get('prompt_strength', 0.8))
-            guidance_scale = float(data.get('guidance_scale', 3.5))
+            guidance_scale = float(data.get('guidance_scale', 3))
             num_inference_steps = int(data.get('num_inference_steps', 28))
             width = int(data.get('width', 1024))
             height = int(data.get('height', 1024))
