@@ -3,7 +3,8 @@ import uuid
 from datetime import datetime, timezone
 
 from models.database import get_db
-from config import TEMPLATE_IMAGES_FOLDER
+
+TEMPLATE_IMAGES_FOLDER = 'template_images'
 
 
 def list_templates():

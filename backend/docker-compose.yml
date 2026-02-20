@@ -1,0 +1,39 @@
+services:
+  training:
+    build: ./training
+    ports:
+      - "5001:5001"
+    env_file:
+      - ./training/.env
+    volumes:
+      - training-uploads:/app/uploads
+    restart: unless-stopped
+
+  image-generation:
+    build: ./image-generation
+    ports:
+      - "5002:5002"
+    env_file:
+      - ./image-generation/.env
+    volumes:
+      - generation-uploads:/app/uploads
+      - generation-output:/app/generated
+    restart: unless-stopped
+
+  templates:
+    build: ./templates
+    ports:
+      - "5003:5003"
+    env_file:
+      - ./templates/.env
+    volumes:
+      - templates-images:/app/template_images
+      - templates-db:/app
+    restart: unless-stopped
+
+volumes:
+  training-uploads:
+  generation-uploads:
+  generation-output:
+  templates-images:
+  templates-db:

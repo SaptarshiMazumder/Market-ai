@@ -6,8 +6,11 @@ from flask import Blueprint, jsonify, request
 from werkzeug.utils import secure_filename
 import replicate
 
-from config import UPLOAD_FOLDER, FLUX_TRAINER_MODEL, FLUX_TRAINER_VERSION
 from services.replicate_models import ensure_model_exists
+
+UPLOAD_FOLDER = 'uploads'
+FLUX_TRAINER_MODEL = "ostris/flux-dev-lora-trainer"
+FLUX_TRAINER_VERSION = "e440909d3512c31646ee2e0c7d6f6f4923224863a6a10c494606e79fb5844497"
 
 training_bp = Blueprint('training', __name__)
 

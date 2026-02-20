@@ -4,12 +4,13 @@ import uuid
 from flask import Blueprint, jsonify, request, send_file
 from werkzeug.utils import secure_filename
 
-from config import TEMPLATE_IMAGES_FOLDER
 from models.template import (
     list_templates as db_list_templates,
     create_template as db_create_template,
     delete_template as db_delete_template,
 )
+
+TEMPLATE_IMAGES_FOLDER = 'template_images'
 
 templates_bp = Blueprint('templates', __name__)
 

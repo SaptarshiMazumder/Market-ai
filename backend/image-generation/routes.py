@@ -6,8 +6,10 @@ from werkzeug.utils import secure_filename
 import replicate
 import requests as http_requests
 
-from config import UPLOAD_FOLDER, GENERATED_FOLDER
 from services.gemini import generate_prompt as gemini_generate_prompt, generate_upscale_prompts
+
+UPLOAD_FOLDER = 'uploads'
+GENERATED_FOLDER = 'generated'
 
 generate_bp = Blueprint('generate', __name__)
 
