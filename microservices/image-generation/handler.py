@@ -1,6 +1,8 @@
 import runpod
 import requests
 import os
+import json
+import copy
 import time
 import subprocess
 import random
@@ -8,6 +10,8 @@ import socket
 import uuid
 import boto3
 from botocore.config import Config
+
+WORKFLOW_PATH = os.path.join(os.path.dirname(__file__), "LoraWorkflow.json")
 
 COMFYUI_URL = "http://127.0.0.1:8188"
 LORAS_DIR = "/comfyui/models/loras"
@@ -82,6 +86,34 @@ def wait_for_comfyui(timeout=300):
     raise TimeoutError("ComfyUI failed to start in time")
 
 
+def _build_workflow(prompt: str, width: int, height: int,
+                    steps: int, lora_scale: float) -> dict:
+    """Load LoraWorkflow.json and inject runtime params."""
+    with open(WORKFLOW_PATH) as f:
+        workflow = copy.deepcopy(json.load(f))
+
+    # Find which node ID is the positive prompt by inspecting the KSampler
+    positive_node_id = None
+    for node in workflow.values():
+        if node.get("class_type") == "KSampler":
+            node["inputs"]["steps"] = steps
+            node["inputs"]["seed"] = random.randint(0, 2**32 - 1)
+            positive_node_id = str(node["inputs"]["positive"][0])
+
+    for node_id, node in workflow.items():
+        class_type = node.get("class_type")
+        if class_type == "CLIPTextEncode" and node_id == positive_node_id:
+            node["inputs"]["text"] = prompt
+        elif class_type == "EmptyLatentImage":
+            node["inputs"]["width"] = width
+            node["inputs"]["height"] = height
+        elif class_type == "LoraLoader":
+            node["inputs"]["strength_model"] = lora_scale
+            node["inputs"]["strength_clip"] = lora_scale
+
+    return workflow
+
+
 def download_lora(lora_key: str) -> str:
     """Download LoRA from Cloudflare R2 into the ComfyUI loras dir. Returns filename."""
     # Strip r2://bucket/ prefix if present
@@ -147,28 +179,28 @@ def upload_images_to_r2(history) -> list:
 def handler(job):
     job_input = job["input"]
     lora_key = job_input.get("lora_key")
-    workflow = job_input.get("workflow")
+    prompt = job_input.get("prompt", "")
+    width = int(job_input.get("width", 1024))
+    height = int(job_input.get("height", 1024))
+    steps = int(job_input.get("steps", 25))
+    lora_scale = float(job_input.get("lora_scale", 1.0))
 
-    if not workflow:
-        return {"error": "No workflow provided"}
+    if not lora_key:
+        return {"error": "lora_key is required"}
 
-    if lora_key:
-        lora_filename = download_lora(lora_key)
+    lora_filename = download_lora(lora_key)
 
-        # If this LoRA wasn't present when ComfyUI started, restart so it sees it
-        if lora_filename not in known_loras:
-            print(f"New LoRA detected ({lora_filename}), restarting ComfyUI...")
-            start_comfyui()
+    # If this LoRA wasn't present when ComfyUI started, restart so it sees it
+    if lora_filename not in known_loras:
+        print(f"New LoRA detected ({lora_filename}), restarting ComfyUI...")
+        start_comfyui()
 
-        # Inject LoRA filename into workflow
-        for node in workflow.values():
-            if node.get("class_type") == "LoraLoader":
-                node["inputs"]["lora_name"] = lora_filename
+    workflow = _build_workflow(prompt, width, height, steps, lora_scale)
 
-    # Randomize seed so every request is treated as a new job by ComfyUI
+    # Inject the downloaded LoRA filename
     for node in workflow.values():
-        if node.get("class_type") == "KSampler":
-            node["inputs"]["seed"] = random.randint(0, 2**32 - 1)
+        if node.get("class_type") == "LoraLoader":
+            node["inputs"]["lora_name"] = lora_filename
 
     prompt_id = queue_workflow(workflow)
     history = wait_for_job(prompt_id)
