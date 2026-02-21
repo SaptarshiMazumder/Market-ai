@@ -27,7 +27,7 @@ def get_training_config():
 
 @training_bp.route('/api/models', methods=['GET'])
 def get_models():
-    """Return all trained models from SQLite."""
+    """Return all trained models."""
     try:
         return jsonify({"models": list_models()})
     except Exception as e:

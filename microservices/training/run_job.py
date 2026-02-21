@@ -54,9 +54,9 @@ if __name__ == "__main__":
     print(f"Mode: {mode}")
 
     config = {
-        "dataset_url": "https://storage.googleapis.com/train-loras/dataset.zip",
-        "lora_name": "myProd_v2",
-        "trigger_word": "MY_PROD",
+        "dataset_url": "<YOUR_DATASET_ZIP_URL>",
+        "lora_name": "my_model",
+        "trigger_word": "TOK",
     }
 
     if mode == "test":

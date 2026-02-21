@@ -42,9 +42,9 @@ Go to RunPod → Serverless → `xenogeneic_black_dormouse` → Manage → updat
 python run_job.py
 ```
 
-### With a specific LoRA URL
+### With a specific LoRA key
 ```bash
-python run_job.py "https://storage.googleapis.com/products-market-ai/myProd.safetensors"
+python run_job.py "r2://test-ftp/my_model.safetensors"
 ```
 
 Output is saved as `output_0.png` in the current directory.

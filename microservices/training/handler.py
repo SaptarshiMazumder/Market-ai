@@ -15,14 +15,14 @@ WORK_DIR = "/tmp/train_job"
 TOOLKIT_DIR = "/app/ai-toolkit"
 
 
-def download_dataset(gcs_url: str, dest_dir: str) -> str:
+def download_dataset(url: str, dest_dir: str) -> str:
     """Download and extract a dataset zip from a public URL."""
     zip_path = os.path.join(dest_dir, "dataset.zip")
     extract_dir = os.path.join(dest_dir, "dataset")
     os.makedirs(extract_dir, exist_ok=True)
 
-    print(f"Downloading dataset from {gcs_url}")
-    resp = requests.get(gcs_url, stream=True)
+    print(f"Downloading dataset from {url}")
+    resp = requests.get(url, stream=True)
     resp.raise_for_status()
     with open(zip_path, "wb") as f:
         for chunk in resp.iter_content(chunk_size=8192):

@@ -2,6 +2,7 @@ import os
 import uuid
 from datetime import datetime, timezone
 
+import psycopg2.extras
 from models.database import get_db
 
 TEMPLATE_IMAGES_FOLDER = 'template_images'
@@ -9,20 +10,21 @@ TEMPLATE_IMAGES_FOLDER = 'template_images'
 
 def list_templates():
     conn = get_db()
-    rows = conn.execute(
-        "SELECT * FROM templates ORDER BY created_at DESC"
-    ).fetchall()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("SELECT * FROM templates ORDER BY created_at DESC")
+    rows = cur.fetchall()
+    cur.close()
     conn.close()
-    templates = []
-    for r in rows:
-        templates.append({
+    return [
+        {
             "id": r["id"],
             "name": r["name"],
             "prompt": r["prompt"],
             "image_url": f"/api/template-images/{r['image_filename']}",
             "created_at": r["created_at"],
-        })
-    return templates
+        }
+        for r in rows
+    ]
 
 
 def create_template(name, prompt_text, image_filename):
@@ -30,11 +32,13 @@ def create_template(name, prompt_text, image_filename):
     created_at = datetime.now(timezone.utc).isoformat()
 
     conn = get_db()
-    conn.execute(
-        "INSERT INTO templates (id, name, prompt, image_filename, created_at) VALUES (?, ?, ?, ?, ?)",
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO templates (id, name, prompt, image_filename, created_at) VALUES (%s, %s, %s, %s, %s)",
         (template_id, name.strip(), prompt_text.strip(), image_filename, created_at),
     )
     conn.commit()
+    cur.close()
     conn.close()
 
     print(f"[Template] Created: {name} (id={template_id})")
@@ -50,11 +54,12 @@ def create_template(name, prompt_text, image_filename):
 
 def delete_template(template_id):
     conn = get_db()
-    row = conn.execute(
-        "SELECT image_filename FROM templates WHERE id = ?", (template_id,)
-    ).fetchone()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("SELECT image_filename FROM templates WHERE id = %s", (template_id,))
+    row = cur.fetchone()
 
     if not row:
+        cur.close()
         conn.close()
         return False
 
@@ -62,8 +67,9 @@ def delete_template(template_id):
     if os.path.exists(image_path):
         os.remove(image_path)
 
-    conn.execute("DELETE FROM templates WHERE id = ?", (template_id,))
+    cur.execute("DELETE FROM templates WHERE id = %s", (template_id,))
     conn.commit()
+    cur.close()
     conn.close()
 
     print(f"[Template] Deleted: {template_id}")

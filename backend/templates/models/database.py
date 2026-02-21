@@ -1,19 +1,23 @@
-import sqlite3
 import os
-
-DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'market_ai.db')
+import psycopg2
+import psycopg2.extras
 
 
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
+    conn = psycopg2.connect(
+        host=os.environ.get("PGHOST", "postgres"),
+        port=os.environ.get("PGPORT", "5432"),
+        dbname=os.environ.get("PGDATABASE", "training"),
+        user=os.environ.get("PGUSER", "training"),
+        password=os.environ.get("PGPASSWORD", "training"),
+    )
     return conn
 
 
 def init_db():
     conn = get_db()
-    conn.executescript("""
+    cur = conn.cursor()
+    cur.execute("""
         CREATE TABLE IF NOT EXISTS templates (
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
@@ -23,5 +27,6 @@ def init_db():
         );
     """)
     conn.commit()
+    cur.close()
     conn.close()
-    print("Database initialized successfully.")
+    print("[DB] Templates table initialized.")

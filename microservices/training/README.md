@@ -4,10 +4,10 @@ Serverless RunPod endpoint that trains Flux LoRA models using [ai-toolkit](https
 
 ## How It Works
 
-1. Submit a job with a GCS dataset URL and training config
+1. Submit a job with a dataset URL and training config
 2. Worker downloads the dataset, trains a LoRA using ai-toolkit
-3. Trained `.safetensors` is uploaded to your GCS bucket
-4. Job response returns the GCS URL of the trained model
+3. Trained `.safetensors` is uploaded to Cloudflare R2
+4. Job response returns the R2 path of the trained model
 
 FLUX.1-dev (~33 GB) is cached on a RunPod network volume so it only downloads once.
 
@@ -26,12 +26,12 @@ docker push raj1145/flux-tok-trainer:v1
 | GPU                | 24 GB+ (RTX 4090 / A40 / L40)    |
 | Network Volume     | Attach for FLUX.1-dev cache       |
 | Env: `HF_TOKEN`   | HuggingFace read token            |
+| Env: `R2_ACCOUNT_ID` | Cloudflare account ID          |
+| Env: `R2_ACCESS_KEY_ID` | R2 access key               |
+| Env: `R2_SECRET_ACCESS_KEY` | R2 secret key           |
+| Env: `R2_BUCKET`  | Default R2 bucket for output      |
 | Execution Timeout  | 3600 s                            |
 | Flash Boot         | Disabled                          |
-
-For GCS uploads, either:
-- Set `GOOGLE_APPLICATION_CREDENTIALS` env var pointing to a service account JSON on the volume, or
-- Mount a service account key and set the env var accordingly.
 
 ## Submit a Training Job
 
@@ -41,11 +41,10 @@ curl -X POST "https://api.runpod.ai/v2/<ENDPOINT_ID>/run" \
   -H "Content-Type: application/json" \
   -d '{
     "input": {
-      "dataset_gcs_url": "https://storage.googleapis.com/your-bucket/dataset.zip",
-      "output_gcs_bucket": "your-bucket",
-      "output_gcs_path": "trained_loras/myProd_v2.safetensors",
-      "lora_name": "myProd_v2",
-      "trigger_word": "MY_PROD",
+      "dataset_url": "https://example.com/dataset.zip",
+      "r2_bucket": "test-ftp",
+      "lora_name": "my_model",
+      "trigger_word": "TOK",
       "steps": 2000,
       "lr": 1e-4,
       "resolution": [512, 768, 1024],
@@ -68,9 +67,9 @@ curl "https://api.runpod.ai/v2/<ENDPOINT_ID>/status/<JOB_ID>" \
 
 | Parameter          | Required | Default   | Description                                      |
 | ------------------ | -------- | --------- | ------------------------------------------------ |
-| `dataset_gcs_url`  | Yes      | —         | Public/signed URL to a zip of image+caption pairs |
-| `output_gcs_bucket`| Yes      | —         | GCS bucket name for the trained model             |
-| `output_gcs_path`  | No       | auto      | Path within bucket for the output safetensors     |
+| `dataset_url`      | Yes      | —         | Public/signed URL to a zip of image+caption pairs |
+| `r2_bucket`        | Yes      | —         | R2 bucket name for the trained model              |
+| `r2_prefix`        | No       | —         | Path prefix within bucket for the output          |
 | `lora_name`        | No       | lora_output | Name for the LoRA                               |
 | `trigger_word`     | No       | TOK       | Trigger word baked into the LoRA                  |
 | `steps`            | No       | 2000      | Training steps                                    |
@@ -88,9 +87,9 @@ Zip file containing image + caption pairs:
 ```
 dataset.zip
 ├── photo1.jpg
-├── photo1.txt      # "a photo of MY_PROD on a white background"
+├── photo1.txt      # "a photo of TOK on a white background"
 ├── photo2.png
-├── photo2.txt      # "MY_PROD product shot, studio lighting"
+├── photo2.txt      # "TOK product shot, studio lighting"
 └── ...
 ```
 

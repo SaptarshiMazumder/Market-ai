@@ -65,9 +65,16 @@ services:
       - "5003:5003"
     env_file:
       - ./templates/.env
+    environment:
+      - PGHOST=postgres
+      - PGPORT=5432
+      - PGDATABASE=training
+      - PGUSER=training
+      - PGPASSWORD=training
     volumes:
       - templates-images:/app/template_images
-      - templates-db:/app
+    depends_on:
+      - postgres
     restart: unless-stopped
 
 volumes:
@@ -76,4 +83,3 @@ volumes:
   generation-uploads:
   generation-output:
   templates-images:
-  templates-db:
