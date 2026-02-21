@@ -1,12 +1,14 @@
 import os
 import uuid
-from datetime import datetime, timezone
+import threading
 
 from flask import Blueprint, jsonify, request
 from werkzeug.utils import secure_filename
 import replicate
 
 from services.replicate_models import ensure_model_exists
+from services.gcs import upload_weights
+from models.trained_model import list_models, create_model, set_model_url, get_model_by_training_id
 
 UPLOAD_FOLDER = 'uploads'
 FLUX_TRAINER_MODEL = "ostris/flux-dev-lora-trainer"
@@ -15,90 +17,30 @@ FLUX_TRAINER_VERSION = "e440909d3512c31646ee2e0c7d6f6f4923224863a6a10c494606e79f
 training_bp = Blueprint('training', __name__)
 
 
+def _upload_and_save(replicate_training_id, model_name, version_hash, weights_url):
+    """Background thread: upload weights to GCS, then update SQLite."""
+    def _run():
+        try:
+            gcs_url = upload_weights(model_name, version_hash, weights_url)
+            set_model_url(replicate_training_id, gcs_url)
+            print(f"[Train] Model URL saved to DB: {gcs_url}")
+        except Exception as e:
+            print(f"[Train] Background upload failed: {e}")
+    threading.Thread(target=_run, daemon=True).start()
+
+
 @training_bp.route('/api/models', methods=['GET'])
 def get_models():
-    """Fetch all trained Flux LoRA models from Replicate."""
+    """Return all trained models from SQLite."""
     try:
-        trainings = replicate.trainings.list()
-        models = []
-
-        def _parse_dt(value):
-            if not value:
-                return None
-            if isinstance(value, datetime):
-                return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
-            if isinstance(value, str):
-                try:
-                    dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
-                    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
-                except ValueError:
-                    return None
-            return None
-
-        def _duration_seconds(start, end):
-            if not start or not end:
-                return None
-            return max(0.0, (end - start).total_seconds())
-
-        for t in trainings:
-            if "ostris/flux-dev-lora-trainer" in t.model:
-                created_at = _parse_dt(getattr(t, "created_at", None))
-                started_at = _parse_dt(getattr(t, "started_at", None))
-                completed_at = _parse_dt(getattr(t, "completed_at", None))
-                now = datetime.now(timezone.utc)
-
-                queued_seconds = _duration_seconds(created_at, started_at)
-                running_end = completed_at or (now if started_at else None)
-                total_end = completed_at or (now if created_at else None)
-                running_seconds = _duration_seconds(started_at, running_end)
-                total_seconds = _duration_seconds(created_at, total_end)
-
-                urls = getattr(t, "urls", {}) or {}
-                output = getattr(t, "output", None) or {}
-
-                # The real model string lives in output['version']
-                # e.g. "saptarshimazumder/joystick:8d38a755..."
-                output_version = output.get("version") if isinstance(output, dict) else None
-
-                # Parse the name from the model string (before the colon)
-                display_name = None
-                if output_version and ":" in output_version:
-                    display_name = output_version.split(":")[0]
-
-                entry = {
-                    "id": getattr(t, "id", None),
-                    "trainer": t.model,
-                    "model": t.model,
-                    "source": getattr(t, "source", None),
-                    "status": t.status,
-                    "destination": display_name or t.destination,
-                    "created_at": getattr(t, "created_at", None),
-                    "started_at": getattr(t, "started_at", None),
-                    "completed_at": getattr(t, "completed_at", None),
-                    "queued_seconds": queued_seconds,
-                    "running_seconds": running_seconds,
-                    "total_seconds": total_seconds,
-                    "training_url": urls.get("web"),
-                }
-                # Extract trigger word from training input
-                training_input = getattr(t, "input", {}) or {}
-                if isinstance(training_input, dict):
-                    entry["trigger_word"] = training_input.get("trigger_word", "")
-
-                if t.status == "succeeded" and output_version:
-                    entry["model_string"] = output_version
-                    entry["version"] = output_version.split(":")[-1] if ":" in output_version else None
-                models.append(entry)
-
-        return jsonify({"models": models})
-
+        return jsonify({"models": list_models()})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
 @training_bp.route('/api/train', methods=['POST'])
 def start_training():
-    """Start a new Flux LoRA training job."""
+    """Start a Flux LoRA training job and create a DB record."""
     try:
         model_name = request.form.get('model_name')
         trigger_word = request.form.get('trigger_word', 'TOK')
@@ -107,16 +49,13 @@ def start_training():
         if not model_name or not zip_file:
             return jsonify({"error": "model_name and images (zip) are required"}), 400
 
-        # Save the zip file
         filename = f"{uuid.uuid4()}_{secure_filename(zip_file.filename)}"
         filepath = os.path.join(UPLOAD_FOLDER, filename)
         zip_file.save(filepath)
 
-        # Ensure destination model exists in Replicate
         destination, _ = ensure_model_exists(model_name)
 
-        print(f"[Train] Starting training: {destination}")
-        print(f"[Train] Trigger word: {trigger_word}")
+        print(f"[Train] Starting training: {destination}, trigger: {trigger_word}")
 
         training = replicate.trainings.create(
             model=FLUX_TRAINER_MODEL,
@@ -136,12 +75,15 @@ def start_training():
             destination=destination
         )
 
-        print(f"[Train] Training started with ID: {training.id}")
+        # Persist the pending training to SQLite immediately
+        create_model(
+            name=model_name,
+            trigger_word=trigger_word,
+            replicate_training_id=training.id,
+        )
 
-        return jsonify({
-            "training_id": training.id,
-            "destination": destination,
-        })
+        print(f"[Train] Training started: {training.id}")
+        return jsonify({"training_id": training.id, "destination": destination})
 
     except Exception as e:
         print(f"[Train] Error: {e}")
@@ -150,7 +92,10 @@ def start_training():
 
 @training_bp.route('/api/training-status/<training_id>', methods=['GET'])
 def training_status(training_id):
-    """Poll training status."""
+    """
+    Poll Replicate for training status.
+    On first success: uploads weights to GCS and updates SQLite.
+    """
     try:
         training = replicate.trainings.get(training_id)
 
@@ -161,13 +106,21 @@ def training_status(training_id):
         }
 
         if training.logs:
-            log_lines = training.logs.strip().split('\n')
-            result["logs"] = '\n'.join(log_lines[-20:])
+            result["logs"] = '\n'.join(training.logs.strip().split('\n')[-20:])
 
         if training.status == "succeeded":
             output = getattr(training, "output", None) or {}
             version_str = output.get("version") if isinstance(output, dict) else None
+            weights_url = output.get("weights") if isinstance(output, dict) else None
+
             result["model_string"] = version_str
+
+            # Kick off GCS upload + DB update only if not already done
+            db_record = get_model_by_training_id(training_id)
+            if db_record and db_record.get("model_string") is None and version_str and weights_url:
+                destination, version_hash = version_str.split(":") if ":" in version_str else (version_str, "unknown")
+                model_name = destination.split("/")[-1] if "/" in destination else destination
+                _upload_and_save(training_id, model_name, version_hash, weights_url)
 
         if training.status == "failed":
             result["error"] = str(getattr(training, "error", "Unknown error"))
@@ -180,7 +133,7 @@ def training_status(training_id):
 
 @training_bp.route('/api/debug/trainings', methods=['GET'])
 def debug_trainings():
-    """Dump raw training data to figure out available fields."""
+    """Dump raw Replicate training data."""
     try:
         trainings = replicate.trainings.list()
         results = []

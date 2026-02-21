@@ -3,6 +3,7 @@ from flask_cors import CORS
 import os
 from dotenv import load_dotenv
 
+from models.database import init_db
 from routes import training_bp
 
 load_dotenv()
@@ -11,6 +12,8 @@ app = Flask(__name__)
 CORS(app)
 
 os.makedirs('uploads', exist_ok=True)
+
+init_db()
 
 app.register_blueprint(training_bp)
 
