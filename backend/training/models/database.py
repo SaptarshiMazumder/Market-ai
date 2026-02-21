@@ -1,33 +1,34 @@
-import sqlite3
 import os
-from datetime import datetime, timezone
-
-DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'training.db')
+import psycopg2
+import psycopg2.extras
 
 
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
+    conn = psycopg2.connect(
+        host=os.environ.get("PGHOST", "postgres"),
+        port=os.environ.get("PGPORT", "5432"),
+        dbname=os.environ.get("PGDATABASE", "training"),
+        user=os.environ.get("PGUSER", "training"),
+        password=os.environ.get("PGPASSWORD", "training"),
+    )
     return conn
 
 
 def init_db():
     conn = get_db()
-    conn.executescript("""
+    cur = conn.cursor()
+    cur.execute("""
         CREATE TABLE IF NOT EXISTS trained_models (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             name TEXT NOT NULL,
             trigger_word TEXT NOT NULL,
             model_url TEXT,
             runpod_job_id TEXT,
             status TEXT DEFAULT 'training',
             created_at TEXT NOT NULL
-        );
+        )
     """)
-
-    # No seed data — models are created via training jobs
-
     conn.commit()
+    cur.close()
     conn.close()
     print("[DB] Training database initialized.")

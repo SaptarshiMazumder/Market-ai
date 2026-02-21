@@ -99,12 +99,22 @@ function App() {
       .catch(() => {})
   }, [])
 
-  // Fetch existing models
+  // Fetch existing models — resume polling if any are still training
   useEffect(() => {
     axios.get('/api/models')
       .then(res => {
-        setModels(res.data.models)
+        const allModels = res.data.models
+        setModels(allModels)
         setModelsLoading(false)
+
+        // Resume polling for the most recent in-progress job
+        const inProgress = allModels.find(m => m.status === 'training' && m.runpod_job_id)
+        if (inProgress && !trainingId) {
+          console.log('[Resume] Resuming poll for job', inProgress.runpod_job_id)
+          setTrainingId(inProgress.runpod_job_id)
+          setTrainingStatus('training')
+          setStep1Mode('train')
+        }
       })
       .catch(err => {
         setModelsError(err.response?.data?.error || err.message)
@@ -129,16 +139,15 @@ function App() {
     function poll() {
       axios.get(`/api/training-status/${trainingId}`)
         .then(res => {
-          const { status, logs, model_string, trigger_word, error } = res.data
+          const { status, logs, model_string, trigger_word, model_name, error } = res.data
           setTrainingStatus(status)
           if (logs) setTrainingLogs(logs)
 
           if (status === 'succeeded' && model_string) {
-            const name = model_string.split(':')[0]
             setSelectedModel({
               model_string: model_string,
-              destination: name,
-              trigger_word: trigger_word || '',
+              destination: model_name || trainModelName,
+              trigger_word: trigger_word || trainTriggerWord,
             })
             setTrainingId(null)
             setStep1Mode('existing')
@@ -461,6 +470,8 @@ function App() {
                         <span className={`text-xs px-2 py-1 rounded-full border ${
                           model.status === 'processing'
                             ? 'bg-yellow-900/50 text-yellow-400 border-yellow-800'
+                            : model.status === 'training'
+                            ? 'bg-orange-900/50 text-orange-400 border-orange-800'
                             : 'bg-red-900/50 text-red-400 border-red-800'
                         }`}>
                           {model.status}
@@ -490,7 +501,7 @@ function App() {
                       placeholder="e.g. my_product"
                       className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-blue-500"
                     />
-                    <p className="text-xs text-gray-600 mt-1">This becomes your model ID on Replicate</p>
+                    <p className="text-xs text-gray-600 mt-1">Used as the LoRA filename in R2</p>
                   </div>
 
                   <div>

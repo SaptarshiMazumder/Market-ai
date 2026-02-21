@@ -6,7 +6,7 @@ from werkzeug.utils import secure_filename
 
 from services.r2 import upload_dataset
 from services.runpod import submit_job, get_job_status
-from models.trained_model import list_models, create_model, set_model_url, get_model_by_job_id
+from models.trained_model import list_models, create_model, set_model_url, set_model_failed, get_model_by_job_id
 
 training_bp = Blueprint('training', __name__)
 
@@ -81,15 +81,23 @@ def training_status(job_id):
         data = get_job_status(job_id)
         runpod_status = data.get("status")
 
+        TERMINAL_FAILED = {"FAILED", "CANCELLED", "TIMED_OUT", "CANCELLED_BY_SYSTEM"}
+
         # Map RunPod statuses to our internal statuses
         if runpod_status == "COMPLETED":
             status = "succeeded"
-        elif runpod_status == "FAILED":
+        elif runpod_status in TERMINAL_FAILED:
             status = "failed"
         else:
             status = "training"  # IN_QUEUE, IN_PROGRESS, etc.
 
         result = {"status": status, "model_string": None}
+
+        # Always attach DB metadata so the frontend has name + trigger_word
+        db_record = get_model_by_job_id(job_id)
+        if db_record:
+            result["model_name"] = db_record.get("name") or db_record.get("destination")
+            result["trigger_word"] = db_record.get("trigger_word")
 
         if runpod_status == "COMPLETED":
             output = data.get("output", {})
@@ -97,12 +105,13 @@ def training_status(job_id):
             result["model_string"] = r2_path
 
             # Persist to DB only once (when model_string not yet set)
-            db_record = get_model_by_job_id(job_id)
             if db_record and db_record.get("model_string") is None and r2_path:
                 set_model_url(job_id, r2_path)
 
-        if runpod_status == "FAILED":
-            result["error"] = data.get("error", "Unknown error")
+        elif runpod_status in TERMINAL_FAILED:
+            result["error"] = data.get("error") or f"Job {runpod_status.lower()}"
+            if db_record and db_record.get("status") != "failed":
+                set_model_failed(job_id)
 
         return jsonify(result)
 

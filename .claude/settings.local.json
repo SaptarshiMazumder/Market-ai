@@ -8,7 +8,10 @@
       "Bash(tasklist:*)",
       "Bash(pip show:*)",
       "Bash(curl:*)",
-      "WebFetch(domain:replicate.com)"
+      "WebFetch(domain:replicate.com)",
+      "Bash(docker compose exec postgres psql:*)",
+      "Bash(netstat:*)",
+      "Bash(powershell -command:*)"
     ]
   }
 }
