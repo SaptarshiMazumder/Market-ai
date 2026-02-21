@@ -46,9 +46,17 @@ services:
       - "5002:5002"
     env_file:
       - ./image-generation/.env
+    environment:
+      - PGHOST=postgres
+      - PGPORT=5432
+      - PGDATABASE=training
+      - PGUSER=training
+      - PGPASSWORD=training
     volumes:
       - generation-uploads:/app/uploads
       - generation-output:/app/generated
+    depends_on:
+      - postgres
     restart: unless-stopped
 
   templates:

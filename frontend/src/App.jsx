@@ -251,7 +251,7 @@ function App() {
 
     try {
       const formData = new FormData()
-      formData.append('model_string', selectedModel.model_string)
+      formData.append('model_id', selectedModel.id)
       formData.append('prompt', promptText)
       formData.append('lora_scale', loraScale)
       formData.append('prompt_strength', promptStrength)

@@ -5,11 +5,10 @@ import uuid
 from flask import Blueprint, jsonify, request, send_file
 from werkzeug.utils import secure_filename
 
-from services.gemini import generate_prompt as gemini_generate_prompt
 from services.runpod import submit_job, get_job_status
 from services.r2 import download_image
+from services.db import get_model_url
 
-UPLOAD_FOLDER = 'uploads'
 GENERATED_FOLDER = 'generated'
 
 generate_bp = Blueprint('generate', __name__)
@@ -22,7 +21,7 @@ def generate_image():
     """Generate an image using a trained Flux LoRA via RunPod + ComfyUI."""
     try:
         if request.content_type and 'multipart/form-data' in request.content_type:
-            model_string = request.form.get('model_string')
+            model_id = request.form.get('model_id')
             prompt = request.form.get('prompt')
             lora_scale = float(request.form.get('lora_scale', 1.0))
             num_inference_steps = int(request.form.get('num_inference_steps', 25))
@@ -30,21 +29,25 @@ def generate_image():
             height = int(request.form.get('height', 1024))
         else:
             data = request.json or {}
-            model_string = data.get('model_string')
+            model_id = data.get('model_id')
             prompt = data.get('prompt')
             lora_scale = float(data.get('lora_scale', 1.0))
             num_inference_steps = int(data.get('num_inference_steps', 25))
             width = int(data.get('width', 1024))
             height = int(data.get('height', 1024))
 
-        if not model_string or not prompt:
-            return jsonify({"error": "model_string and prompt are required"}), 400
+        if not model_id or not prompt:
+            return jsonify({"error": "model_id and prompt are required"}), 400
 
-        print(f"[Generate] LoRA: {model_string}")
+        lora_key = get_model_url(int(model_id))
+        if not lora_key:
+            return jsonify({"error": f"No succeeded model found for id {model_id}"}), 404
+
+        print(f"[Generate] model_id={model_id}  lora_key={lora_key}")
         print(f"[Generate] Prompt: {prompt}")
 
         job_id = submit_job(
-            lora_key=model_string,
+            lora_key=lora_key,
             prompt=prompt,
             width=width,
             height=height,
@@ -92,27 +95,6 @@ def generate_image():
         print(f"[Generate] Error: {e}")
         return jsonify({"error": str(e)}), 500
 
-
-@generate_bp.route('/api/generate-prompt', methods=['POST'])
-def generate_prompt():
-    """Use Gemini to analyze a sample image and generate an optimized prompt."""
-    try:
-        trigger_word = request.form.get("trigger_word", "")
-        sample_file = request.files.get("sample_image")
-
-        if not sample_file:
-            return jsonify({"error": "sample_image is required"}), 400
-
-        filename = f"{uuid.uuid4()}_{secure_filename(sample_file.filename)}"
-        filepath = os.path.join(UPLOAD_FOLDER, filename)
-        sample_file.save(filepath)
-
-        generated_prompt = gemini_generate_prompt(filepath, trigger_word)
-        return jsonify({"prompt": generated_prompt})
-
-    except Exception as e:
-        print(f"[PromptGen] Error: {e}")
-        return jsonify({"error": str(e)}), 500
 
 
 @generate_bp.route('/api/images/<filename>', methods=['GET'])

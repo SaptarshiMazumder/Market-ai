@@ -10,7 +10,6 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app)
 
-os.makedirs('uploads', exist_ok=True)
 os.makedirs('generated', exist_ok=True)
 
 app.register_blueprint(generate_bp)

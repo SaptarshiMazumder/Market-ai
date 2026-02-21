@@ -16,19 +16,17 @@ WORKFLOW_PATH = os.path.join(os.path.dirname(__file__), "LoraWorkflow.json")
 COMFYUI_URL = "http://127.0.0.1:8188"
 LORAS_DIR = "/comfyui/models/loras"
 
-R2_ENDPOINT_URL = os.environ.get("R2_ENDPOINT_URL")
-R2_ACCESS_KEY_ID = os.environ.get("R2_ACCESS_KEY_ID")
-R2_SECRET_ACCESS_KEY = os.environ.get("R2_SECRET_ACCESS_KEY")
 R2_LORA_BUCKET = os.environ.get("R2_LORA_BUCKET", "test-ftp")
 R2_OUTPUT_BUCKET = os.environ.get("R2_OUTPUT_BUCKET", "test-ftp")
 
 
 def _r2_client():
+    account_id = os.environ["R2_ACCOUNT_ID"].strip()
     return boto3.client(
         "s3",
-        endpoint_url=R2_ENDPOINT_URL,
-        aws_access_key_id=R2_ACCESS_KEY_ID,
-        aws_secret_access_key=R2_SECRET_ACCESS_KEY,
+        endpoint_url=f"https://{account_id}.r2.cloudflarestorage.com",
+        aws_access_key_id=os.environ["R2_ACCESS_KEY_ID"].strip(),
+        aws_secret_access_key=os.environ["R2_SECRET_ACCESS_KEY"].strip(),
         config=Config(signature_version="s3v4"),
         region_name="auto",
     )
@@ -116,17 +114,21 @@ def _build_workflow(prompt: str, width: int, height: int,
 
 def download_lora(lora_key: str) -> str:
     """Download LoRA from Cloudflare R2 into the ComfyUI loras dir. Returns filename."""
-    # Strip r2://bucket/ prefix if present
     if lora_key.startswith("r2://"):
-        lora_key = lora_key.split("/", 3)[-1]
+        parts = lora_key[5:].split("/", 1)
+        bucket = parts[0]
+        key = parts[1]
+    else:
+        bucket = R2_LORA_BUCKET
+        key = lora_key
 
-    filename = os.path.basename(lora_key)
+    filename = os.path.basename(key)
     dest = os.path.join(LORAS_DIR, filename)
 
     if not os.path.exists(dest):
-        print(f"Downloading LoRA from R2: {lora_key}")
+        print(f"Downloading LoRA from R2: bucket={bucket} key={key}")
         os.makedirs(LORAS_DIR, exist_ok=True)
-        _r2_client().download_file(R2_LORA_BUCKET, lora_key, dest)
+        _r2_client().download_file(bucket, key, dest)
         print(f"Downloaded: {filename}")
 
     return filename

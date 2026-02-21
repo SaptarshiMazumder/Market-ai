@@ -7,7 +7,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-RUN mkdir -p uploads generated
+RUN mkdir -p generated
 
 EXPOSE 5002
 
