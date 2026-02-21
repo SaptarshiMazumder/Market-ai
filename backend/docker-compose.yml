@@ -7,6 +7,7 @@ services:
       - ./training/.env
     volumes:
       - training-uploads:/app/uploads
+      - training-db:/app/training.db
     restart: unless-stopped
 
   image-generation:
@@ -33,6 +34,7 @@ services:
 
 volumes:
   training-uploads:
+  training-db:
   generation-uploads:
   generation-output:
   templates-images:

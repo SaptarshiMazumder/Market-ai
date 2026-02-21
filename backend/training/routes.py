@@ -1,4 +1,5 @@
 import uuid
+import json
 
 from flask import Blueprint, jsonify, request
 from werkzeug.utils import secure_filename
@@ -8,6 +9,20 @@ from services.runpod import submit_job, get_job_status
 from models.trained_model import list_models, create_model, set_model_url, get_model_by_job_id
 
 training_bp = Blueprint('training', __name__)
+
+TRAINING_DEFAULTS = {
+    "steps": 2000,
+    "lr": 1e-4,
+    "lora_rank": 16,
+    "batch_size": 2,
+    "resolution": [512, 768, 1024],
+}
+
+
+@training_bp.route('/api/training-config', methods=['GET'])
+def get_training_config():
+    """Return default training config values for the UI."""
+    return jsonify(TRAINING_DEFAULTS)
 
 
 @training_bp.route('/api/models', methods=['GET'])
@@ -30,11 +45,24 @@ def start_training():
         if not model_name or not zip_file:
             return jsonify({"error": "model_name and images (zip) are required"}), 400
 
+        # Optional training overrides (all have defaults in the RunPod worker)
+        overrides = {}
+        if request.form.get('steps'):
+            overrides['steps'] = int(request.form.get('steps'))
+        if request.form.get('lr'):
+            overrides['lr'] = float(request.form.get('lr'))
+        if request.form.get('lora_rank'):
+            overrides['lora_rank'] = int(request.form.get('lora_rank'))
+        if request.form.get('batch_size'):
+            overrides['batch_size'] = int(request.form.get('batch_size'))
+        if request.form.get('resolution'):
+            overrides['resolution'] = json.loads(request.form.get('resolution'))
+
         key = f"{uuid.uuid4()}_{secure_filename(zip_file.filename)}"
         dataset_url = upload_dataset(key, zip_file.stream)
         print(f"[Train] Uploaded dataset to R2: {key}")
 
-        job_id = submit_job(dataset_url, lora_name=model_name, trigger_word=trigger_word)
+        job_id = submit_job(dataset_url, lora_name=model_name, trigger_word=trigger_word, overrides=overrides)
         print(f"[Train] RunPod job submitted: {job_id}")
 
         create_model(name=model_name, trigger_word=trigger_word, job_id=job_id)

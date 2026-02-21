@@ -16,6 +16,8 @@ function App() {
   const [trainTriggerWord, setTrainTriggerWord] = useState('TOK')
   const [trainZip, setTrainZip] = useState(null)
   const [trainZipName, setTrainZipName] = useState('')
+  const [trainConfig, setTrainConfig] = useState(null)
+  const [showAdvanced, setShowAdvanced] = useState(false)
 
   // Training state
   const [trainingId, setTrainingId] = useState(null)
@@ -89,6 +91,13 @@ function App() {
     const diffDay = Math.floor(diffHr / 24)
     return `${diffDay}d ago`
   }
+
+  // Fetch training config defaults
+  useEffect(() => {
+    axios.get('/api/training-config')
+      .then(res => setTrainConfig(res.data))
+      .catch(() => {})
+  }, [])
 
   // Fetch existing models
   useEffect(() => {
@@ -183,9 +192,16 @@ function App() {
       formData.append('model_name', trainModelName.trim().toLowerCase().replace(/\s+/g, '_'))
       formData.append('trigger_word', trainTriggerWord.trim() || 'TOK')
       formData.append('images', trainZip)
+      if (trainConfig) {
+        formData.append('steps', trainConfig.steps)
+        formData.append('lr', trainConfig.lr)
+        formData.append('lora_rank', trainConfig.lora_rank)
+        formData.append('batch_size', trainConfig.batch_size)
+        formData.append('resolution', JSON.stringify(trainConfig.resolution))
+      }
 
       const res = await axios.post('/api/train', formData)
-      setTrainingId(res.data.training_id)
+      setTrainingId(res.data.job_id)
       setTrainingStatus('starting')
     } catch (err) {
       setTrainingError(err.response?.data?.error || err.message)
@@ -505,6 +521,46 @@ function App() {
                       <input type="file" accept=".zip" onChange={handleZipChange} className="hidden" />
                     </label>
                   </div>
+
+                  {trainConfig && (
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => setShowAdvanced(v => !v)}
+                        className="text-sm text-gray-400 hover:text-gray-300 flex items-center gap-1"
+                      >
+                        {showAdvanced ? '▾' : '▸'} Advanced Settings
+                      </button>
+                      {showAdvanced && (
+                        <div className="mt-3 grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Steps</label>
+                            <input type="number" value={trainConfig.steps}
+                              onChange={e => setTrainConfig(c => ({ ...c, steps: parseInt(e.target.value) }))}
+                              className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500" />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Learning Rate</label>
+                            <input type="number" step="0.00001" value={trainConfig.lr}
+                              onChange={e => setTrainConfig(c => ({ ...c, lr: parseFloat(e.target.value) }))}
+                              className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500" />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">LoRA Rank</label>
+                            <input type="number" value={trainConfig.lora_rank}
+                              onChange={e => setTrainConfig(c => ({ ...c, lora_rank: parseInt(e.target.value) }))}
+                              className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500" />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Batch Size</label>
+                            <input type="number" value={trainConfig.batch_size}
+                              onChange={e => setTrainConfig(c => ({ ...c, batch_size: parseInt(e.target.value) }))}
+                              className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   <button
                     type="submit"

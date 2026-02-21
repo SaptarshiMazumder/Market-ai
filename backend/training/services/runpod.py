@@ -15,7 +15,7 @@ def _headers():
     }
 
 
-def submit_job(dataset_url: str, lora_name: str, trigger_word: str) -> str:
+def submit_job(dataset_url: str, lora_name: str, trigger_word: str, overrides: dict = None) -> str:
     """Submit a training job to RunPod and return the job ID."""
     payload = {
         "input": {
@@ -23,6 +23,7 @@ def submit_job(dataset_url: str, lora_name: str, trigger_word: str) -> str:
             "lora_name": lora_name,
             "trigger_word": trigger_word,
             "r2_bucket": R2_OUTPUT_BUCKET,
+            **(overrides or {}),
         }
     }
     r = requests.post(f"{BASE_URL}/run", headers=_headers(), json=payload)

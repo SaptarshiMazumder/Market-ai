@@ -26,19 +26,7 @@ def init_db():
         );
     """)
 
-    # Seed existing model if table is empty
-    existing = conn.execute("SELECT COUNT(*) FROM trained_models").fetchone()[0]
-    if existing == 0:
-        conn.execute(
-            "INSERT INTO trained_models (name, trigger_word, model_url, status, created_at) VALUES (?, ?, ?, ?, ?)",
-            (
-                "myProd",
-                "MY_PROD",
-                "https://storage.googleapis.com/products-market-ai/myProd.safetensors",
-                "succeeded",
-                datetime.now(timezone.utc).isoformat(),
-            )
-        )
+    # No seed data — models are created via training jobs
 
     conn.commit()
     conn.close()
