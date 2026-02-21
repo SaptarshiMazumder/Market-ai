@@ -20,7 +20,7 @@ def init_db():
             name TEXT NOT NULL,
             trigger_word TEXT NOT NULL,
             model_url TEXT,
-            replicate_training_id TEXT,
+            runpod_job_id TEXT,
             status TEXT DEFAULT 'training',
             created_at TEXT NOT NULL
         );

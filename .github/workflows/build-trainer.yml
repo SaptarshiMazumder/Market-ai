@@ -23,6 +23,6 @@ jobs:
 
       - uses: docker/build-push-action@v6
         with:
-          context: ./backend/training
+          context: ./training
           push: true
           tags: raj1145/flux-tok-trainer:${{ github.event.inputs.tag }}

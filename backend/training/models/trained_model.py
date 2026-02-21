@@ -11,14 +11,14 @@ def list_models():
     return [_to_dict(r) for r in rows]
 
 
-def create_model(name, trigger_word, replicate_training_id=None):
+def create_model(name, trigger_word, job_id=None):
     """Insert a new training record (status=training, no model_url yet)."""
     created_at = datetime.now(timezone.utc).isoformat()
     conn = get_db()
     cursor = conn.execute(
-        """INSERT INTO trained_models (name, trigger_word, replicate_training_id, status, created_at)
+        """INSERT INTO trained_models (name, trigger_word, runpod_job_id, status, created_at)
            VALUES (?, ?, ?, 'training', ?)""",
-        (name, trigger_word, replicate_training_id, created_at)
+        (name, trigger_word, job_id, created_at)
     )
     row_id = cursor.lastrowid
     conn.commit()
@@ -26,22 +26,22 @@ def create_model(name, trigger_word, replicate_training_id=None):
     return row_id
 
 
-def set_model_url(replicate_training_id, model_url):
-    """Mark a training as succeeded and store its GCS model URL."""
+def set_model_url(job_id, model_url):
+    """Mark a training as succeeded and store its R2 model path."""
     conn = get_db()
     conn.execute(
-        "UPDATE trained_models SET model_url = ?, status = 'succeeded' WHERE replicate_training_id = ?",
-        (model_url, replicate_training_id)
+        "UPDATE trained_models SET model_url = ?, status = 'succeeded' WHERE runpod_job_id = ?",
+        (model_url, job_id)
     )
     conn.commit()
     conn.close()
 
 
-def get_model_by_training_id(replicate_training_id):
+def get_model_by_job_id(job_id):
     conn = get_db()
     row = conn.execute(
-        "SELECT * FROM trained_models WHERE replicate_training_id = ?",
-        (replicate_training_id,)
+        "SELECT * FROM trained_models WHERE runpod_job_id = ?",
+        (job_id,)
     ).fetchone()
     conn.close()
     return _to_dict(row) if row else None
