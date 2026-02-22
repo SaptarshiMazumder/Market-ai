@@ -8,7 +8,7 @@ import uuid
 import boto3
 from botocore.config import Config
 
-WORKFLOW_PATH = os.path.join(os.path.dirname(__file__), "wanI2bWorkflow.json")
+WORKFLOW_PATH = os.path.join(os.path.dirname(__file__), "workflow-api-C6gm9qJqfnksxkb0xKgFK.json")
 
 COMFYUI_URL = "http://127.0.0.1:8188"
 COMFYUI_INPUT_DIR = "/comfyui/input"
@@ -66,10 +66,10 @@ def build_workflow(image_filename: str, prompt: str) -> dict:
         workflow = copy.deepcopy(json.load(f))
 
     # Inject source image into LoadImage node
-    workflow["97"]["inputs"]["image"] = image_filename
+    workflow["62"]["inputs"]["image"] = image_filename
 
     # Inject positive prompt into CLIPTextEncode node
-    workflow["129:93"]["inputs"]["text"] = prompt
+    workflow["6"]["inputs"]["text"] = prompt
 
     return workflow
 

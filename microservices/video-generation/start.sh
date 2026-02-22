@@ -11,8 +11,6 @@ HF_BASE="https://huggingface.co/Kijai/WanVideo_comfy/resolve/main"
 declare -A MODELS=(
   ["diffusion_models/wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors"]="${HF_BASE}/wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors"
   ["diffusion_models/wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors"]="${HF_BASE}/wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors"
-  ["loras/wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors"]="${HF_BASE}/wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors"
-  ["loras/wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors"]="${HF_BASE}/wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors"
   ["vae/wan_2.1_vae.safetensors"]="${HF_BASE}/wan_2.1_vae.safetensors"
   ["clip/umt5_xxl_fp8_e4m3fn_scaled.safetensors"]="${HF_BASE}/umt5_xxl_fp8_e4m3fn_scaled.safetensors"
 )
