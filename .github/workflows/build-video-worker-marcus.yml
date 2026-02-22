@@ -1,7 +1,7 @@
 name: Build Video Worker (marcusrashford)
 
 on:
-  push:
+  workflow_dispatch:
     branches: [experimental]
 
 
@@ -23,3 +23,5 @@ jobs:
           context: ./microservices/video-generation
           push: true
           tags: marcusrashford/flux-tok-video-worker:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
