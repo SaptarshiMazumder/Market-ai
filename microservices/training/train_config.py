@@ -3,7 +3,7 @@
 import yaml
 import os
 
-VOLUME_MODEL_PATH = "/runpod-volume/FLUX.1-dev"
+VOLUME_MODEL_PATH = os.environ.get("VOLUME_MODEL_PATH", "/runpod-volume/FLUX.1-dev")
 DEFAULT_CONFIG = {
     "trigger_word": "TOK",
     "steps": 2000,

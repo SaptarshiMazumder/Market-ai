@@ -5,8 +5,8 @@ from botocore.config import Config
 R2_ENDPOINT_URL = os.environ.get("R2_ENDPOINT_URL")
 R2_ACCESS_KEY_ID = os.environ.get("R2_ACCESS_KEY_ID")
 R2_SECRET_ACCESS_KEY = os.environ.get("R2_SECRET_ACCESS_KEY")
-R2_INPUT_BUCKET = os.environ.get("R2_INPUT_BUCKET", "objects-to-train")
-R2_OUTPUT_BUCKET = os.environ.get("R2_OUTPUT_BUCKET", "test-ftp")
+R2_INPUT_BUCKET = os.environ.get("R2_INPUT_BUCKET", "exp-train-dataset")
+R2_OUTPUT_BUCKET = os.environ.get("R2_OUTPUT_BUCKET", "exp-models")
 
 
 def _client():

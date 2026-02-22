@@ -13,6 +13,42 @@ from train_config import write_config
 
 WORK_DIR = "/tmp/train_job"
 TOOLKIT_DIR = "/app/ai-toolkit"
+VOLUME_MODEL_PATH = os.environ.get("VOLUME_MODEL_PATH", "/runpod-volume/FLUX.1-dev")
+
+
+def download_base_model(dest_dir: str) -> None:
+    """Download the Flux base model from Civitai if it doesn't exist."""
+    if os.path.exists(dest_dir):
+        print(f"Base model already exists at {dest_dir}. Skipping download.")
+        return
+
+    model_url = os.environ.get("BASE_MODEL_URL")
+    api_key = os.environ.get("CIVITAI_API_KEY")
+
+    if not model_url:
+        print("BASE_MODEL_URL not set. Skipping automated base model download.")
+        return
+
+    print(f"Downloading base model from Civitai to {dest_dir}...")
+    os.makedirs(dest_dir, exist_ok=True)
+    
+    headers = {}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    # Use a subprocess to run wget for efficiency and progress tracking
+    # Civitai download URLs usually work well with wget
+    try:
+        # Example URL: https://civitai.com/api/download/models/618692
+        # We assume the URL provided is a direct download link or Civitai API link
+        download_path = os.path.join(dest_dir, "flux1-dev.safetensors") # Default name
+        
+        cmd = ["wget", "--header", f"Authorization: Bearer {api_key}" if api_key else "", "-O", download_path, model_url]
+        subprocess.run([c for c in cmd if c], check=True)
+        print("Base model download complete.")
+    except Exception as e:
+        print(f"Failed to download base model: {e}")
+        # If it fails, we hope the training fails later with a clear error
 
 
 def download_dataset(url: str, dest_dir: str) -> str:
@@ -118,6 +154,9 @@ def handler(job):
     os.makedirs(WORK_DIR, exist_ok=True)
 
     dataset_dir = download_dataset(dataset_url, WORK_DIR)
+
+    # Ensure base model exists
+    download_base_model(VOLUME_MODEL_PATH)
 
     output_dir = os.path.join(WORK_DIR, "output")
     config_path = os.path.join(WORK_DIR, "train_config.yaml")

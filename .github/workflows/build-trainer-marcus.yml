@@ -1,10 +1,8 @@
 name: Build Trainer (marcusrashford)
 
 on:
-  push:
+  workflow_dispatch:
     branches: [experimental]
-    paths:
-      - 'microservices/training/**'
 
 jobs:
   build-and-push:
