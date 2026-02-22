@@ -23,6 +23,6 @@ jobs:
         with:
           context: ./microservices/image-generation
           push: true
-          tags: marcusrashford/flux-tok-worker:latest
+          tags: marcusrashford/flux-exp-worker:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max

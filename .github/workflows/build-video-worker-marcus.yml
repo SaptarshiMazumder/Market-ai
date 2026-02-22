@@ -22,6 +22,6 @@ jobs:
         with:
           context: ./microservices/video-generation
           push: true
-          tags: marcusrashford/flux-tok-video-worker:latest
+          tags: marcusrashford/flux-exp-video-worker:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
