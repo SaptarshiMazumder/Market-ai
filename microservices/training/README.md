@@ -14,15 +14,17 @@ FLUX.1-dev (~33 GB) is cached on a RunPod network volume so it only downloads on
 ## Build & Push
 
 ```bash
-docker build -t marcusrashford/flux-exp-trainer:v1 .
-docker push marcusrashford/flux-exp-trainer:v1
+# Handled automatically by GitHub Actions on push to experimental
+# Or manual build:
+docker build -t marcusrashford/flux-exp-trainer:latest .
+docker push marcusrashford/flux-exp-trainer:latest
 ```
 
 ## RunPod Endpoint Setup
 
 | Setting            | Value                             |
 | ------------------ | --------------------------------- |
-| Image              | `marcusrashford/flux-exp-trainer:v1`     |
+| Image              | `marcusrashford/flux-exp-trainer:latest`     |
 | GPU                | 24 GB+ (RTX 4090 / A40 / L40)    |
 | Network Volume     | Attach for FLUX.1-dev cache       |
 | Env: `HF_TOKEN`   | HuggingFace read token            |

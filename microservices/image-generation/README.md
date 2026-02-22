@@ -22,12 +22,12 @@ pip install requests
 
 ### Build the Docker image
 ```bash
-docker build -t marcusrashford/flux-exp-worker:v8 .
+docker build -t marcusrashford/flux-exp-worker:latest .
 ```
 
 ### Push to Docker Hub
 ```bash
-docker push marcusrashford/flux-exp-worker:v8
+docker push marcusrashford/flux-exp-worker:latest
 ```
 
 ### Update the RunPod endpoint
@@ -70,7 +70,7 @@ runpod-flux-deploy/
 |---|---|
 | Endpoint ID | `zotmmnshs1nxix` |
 | Endpoint name | `xenogeneic_black_dormouse` |
-| Docker image | `marcusrashford/flux-exp-worker:v7` |
+| Docker image | `marcusrashford/flux-exp-worker:latest` |
 | GPU | 80GB Pro (AP-JP-1) |
 | Network volume | `flux_network_volume` — mounted at `/runpod-volume` |
 
