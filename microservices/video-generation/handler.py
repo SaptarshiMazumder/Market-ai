@@ -5,6 +5,8 @@ import json
 import copy
 import time
 import uuid
+import socket
+import subprocess
 import boto3
 from botocore.config import Config
 
@@ -15,6 +17,15 @@ COMFYUI_INPUT_DIR = "/comfyui/input"
 
 R2_INPUT_BUCKET = os.environ.get("R2_INPUT_BUCKET", "test-ftp")
 R2_OUTPUT_BUCKET = os.environ.get("R2_OUTPUT_BUCKET", "test-ftp")
+
+VOLUME_MODELS = "/runpod-volume/wan-models"
+HF_BASE = "https://huggingface.co/Kijai/WanVideo_comfy/resolve/main"
+MODELS = {
+    "diffusion_models/wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors": f"{HF_BASE}/wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors",
+    "diffusion_models/wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors": f"{HF_BASE}/wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors",
+    "vae/wan_2.1_vae.safetensors": f"{HF_BASE}/wan_2.1_vae.safetensors",
+    "clip/umt5_xxl_fp8_e4m3fn_scaled.safetensors": f"{HF_BASE}/umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+}
 
 
 def _r2_client():
@@ -42,6 +53,63 @@ def wait_for_comfyui(timeout=300):
     raise TimeoutError("ComfyUI failed to start in time")
 
 
+def restart_comfyui():
+    """Kill and restart ComfyUI so it picks up newly symlinked models."""
+    print("Restarting ComfyUI to load new models...")
+    subprocess.run(["pkill", "-9", "-f", "main.py"], capture_output=True)
+
+    for i in range(15):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(1)
+            if s.connect_ex(("127.0.0.1", 8188)) != 0:
+                print(f"Port 8188 free after {i}s")
+                break
+        time.sleep(1)
+    else:
+        print("WARNING: port 8188 may still be in use — proceeding anyway")
+
+    subprocess.Popen(
+        [
+            "python", "/comfyui/main.py",
+            "--disable-auto-launch",
+            "--disable-metadata",
+            "--listen", "127.0.0.1",
+            "--port", "8188",
+        ],
+        cwd="/comfyui",
+    )
+    wait_for_comfyui()
+    print("ComfyUI restarted.")
+
+
+def ensure_models():
+    """Download missing models to network volume, symlink into ComfyUI. Returns True if anything was newly downloaded."""
+    newly_downloaded = False
+    for rel_path, url in MODELS.items():
+        dest = os.path.join(VOLUME_MODELS, rel_path)
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+
+        if not os.path.exists(dest):
+            print(f"Downloading: {rel_path}")
+            subprocess.run(["wget", "-q", "--show-progress", "-O", dest, url], check=True)
+            print(f"Done: {rel_path}")
+            newly_downloaded = True
+        else:
+            print(f"Already exists, skipping: {rel_path}")
+
+        # Symlink into ComfyUI model dir
+        category = os.path.dirname(rel_path)
+        filename = os.path.basename(rel_path)
+        comfy_dir = f"/comfyui/models/{category}"
+        os.makedirs(comfy_dir, exist_ok=True)
+        link = os.path.join(comfy_dir, filename)
+        if not os.path.lexists(link):
+            os.symlink(dest, link)
+            print(f"Linked: {link} → {dest}")
+
+    return newly_downloaded
+
+
 def download_image_from_r2(image_url: str) -> str:
     """Download image from R2 into ComfyUI input dir. Returns filename."""
     if image_url.startswith("r2://"):
@@ -65,10 +133,7 @@ def build_workflow(image_filename: str, prompt: str) -> dict:
     with open(WORKFLOW_PATH) as f:
         workflow = copy.deepcopy(json.load(f))
 
-    # Inject source image into LoadImage node
     workflow["62"]["inputs"]["image"] = image_filename
-
-    # Inject positive prompt into CLIPTextEncode node
     workflow["6"]["inputs"]["text"] = prompt
 
     return workflow
@@ -96,7 +161,6 @@ def upload_video_to_r2(history) -> dict:
     client = _r2_client()
 
     for node_output in history["outputs"].values():
-        # SaveVideo uses "videos" key; fall back to "gifs" or "images"
         for key in ("videos", "gifs", "images"):
             for item in node_output.get(key, []):
                 r = requests.get(
@@ -159,8 +223,16 @@ def handler(job):
     }
 
 
-print("Waiting for ComfyUI to be ready...")
-wait_for_comfyui()
-print("ComfyUI ready.")
+# ---------------------------------------------------------------------------
+# Startup: download models → restart ComfyUI if needed → serve
+# ---------------------------------------------------------------------------
+print("Ensuring models are available...")
+newly_downloaded = ensure_models()
 
+if newly_downloaded:
+    restart_comfyui()
+else:
+    wait_for_comfyui()
+
+print("ComfyUI ready.")
 runpod.serverless.start({"handler": handler})

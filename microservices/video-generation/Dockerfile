@@ -9,16 +9,9 @@ RUN cd /comfyui/custom_nodes && \
     pip install --no-cache-dir -r ComfyUI-WanVideoWrapper/requirements.txt && \
     git clone https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git && \
     pip install --no-cache-dir -r ComfyUI-VideoHelperSuite/requirements.txt
-# ComfySwitchNode is built into ComfyUI core — no extra package needed
 
 # Copy handler and workflow
 COPY handler.py /handler.py
 COPY workflow-api-C6gm9qJqfnksxkb0xKgFK.json /workflow-api-C6gm9qJqfnksxkb0xKgFK.json
 
-# Copy and set up start script
-COPY start.sh /start.sh
-RUN sed -i 's/\r$//' /start.sh && chmod +x /start.sh
-
 WORKDIR /comfyui
-
-CMD ["/start.sh"]
