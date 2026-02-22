@@ -3,7 +3,8 @@ name: Build Image Worker (marcusrashford)
 on:
   push:
     branches: [experimental]
-
+    paths:
+      - 'microservices/image-generation/**'
 
 jobs:
   build-and-push:
@@ -23,3 +24,5 @@ jobs:
           context: ./microservices/image-generation
           push: true
           tags: marcusrashford/flux-tok-worker:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

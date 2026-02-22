@@ -3,7 +3,8 @@ name: Build Trainer (marcusrashford)
 on:
   push:
     branches: [experimental]
-
+    paths:
+      - 'microservices/training/**'
 
 jobs:
   build-and-push:
@@ -23,3 +24,5 @@ jobs:
           context: ./microservices/training
           push: true
           tags: marcusrashford/flux-exp-trainer:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
