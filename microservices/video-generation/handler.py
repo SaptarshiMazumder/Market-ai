@@ -128,13 +128,14 @@ def upload_video_to_r2(history) -> dict:
     raise RuntimeError("No video output found in ComfyUI history")
 
 
+DEFAULT_IMAGE_URL = "r2://objects-to-train/womanWCan.png"
+DEFAULT_PROMPT = "A smooth cinematic product video of a woman holding a can, with subtle natural motion."
+
+
 def handler(job):
     job_input = job["input"]
-    image_url = job_input.get("image_url")
-    prompt = job_input.get("prompt", "A smooth cinematic product video.")
-
-    if not image_url:
-        return {"error": "image_url is required"}
+    image_url = job_input.get("image_url", DEFAULT_IMAGE_URL)
+    prompt = job_input.get("prompt", DEFAULT_PROMPT)
 
     start_time = time.time()
 
