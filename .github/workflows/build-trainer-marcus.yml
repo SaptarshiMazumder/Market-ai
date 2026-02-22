@@ -26,4 +26,4 @@ jobs:
         with:
           context: ./microservices/training
           push: true
-          tags: marcusrashford/flux-tok-trainer:${{ github.event.inputs.tag }}
+          tags: marcusrashford/flux-exp-trainer:${{ github.event.inputs.tag }}
