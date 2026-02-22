@@ -4,6 +4,7 @@ import os
 from dotenv import load_dotenv
 
 from routes import generate_bp
+from services.db import init_db
 
 load_dotenv()
 
@@ -12,6 +13,7 @@ CORS(app)
 
 os.makedirs('generated', exist_ok=True)
 
+init_db()
 app.register_blueprint(generate_bp)
 
 if __name__ == '__main__':

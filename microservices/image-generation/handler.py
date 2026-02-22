@@ -85,23 +85,34 @@ def wait_for_comfyui(timeout=300):
 
 
 def _build_workflow(prompt: str, width: int, height: int,
-                    steps: int, lora_scale: float) -> dict:
+                    steps: int, lora_scale: float,
+                    seed: int | None = None,
+                    guidance_scale: float | None = None,
+                    negative_prompt: str | None = None) -> dict:
     """Load LoraWorkflow.json and inject runtime params."""
     with open(WORKFLOW_PATH) as f:
         workflow = copy.deepcopy(json.load(f))
 
-    # Find which node ID is the positive prompt by inspecting the KSampler
+    actual_seed = seed if seed is not None else random.randint(0, 2**32 - 1)
+
     positive_node_id = None
+    negative_node_id = None
     for node in workflow.values():
         if node.get("class_type") == "KSampler":
             node["inputs"]["steps"] = steps
-            node["inputs"]["seed"] = random.randint(0, 2**32 - 1)
+            node["inputs"]["seed"] = actual_seed
+            if guidance_scale is not None:
+                node["inputs"]["cfg"] = guidance_scale
             positive_node_id = str(node["inputs"]["positive"][0])
+            negative_node_id = str(node["inputs"]["negative"][0])
 
     for node_id, node in workflow.items():
         class_type = node.get("class_type")
         if class_type == "CLIPTextEncode" and node_id == positive_node_id:
             node["inputs"]["text"] = prompt
+        elif class_type == "CLIPTextEncode" and node_id == negative_node_id:
+            if negative_prompt is not None:
+                node["inputs"]["text"] = negative_prompt
         elif class_type == "EmptyLatentImage":
             node["inputs"]["width"] = width
             node["inputs"]["height"] = height
@@ -109,7 +120,7 @@ def _build_workflow(prompt: str, width: int, height: int,
             node["inputs"]["strength_model"] = lora_scale
             node["inputs"]["strength_clip"] = lora_scale
 
-    return workflow
+    return workflow, actual_seed
 
 
 def download_lora(lora_key: str) -> str:
@@ -186,20 +197,31 @@ def handler(job):
     height = int(job_input.get("height", 1024))
     steps = int(job_input.get("steps", 25))
     lora_scale = float(job_input.get("lora_scale", 1.0))
+    seed = job_input.get("seed")
+    if seed is not None:
+        seed = int(seed)
+    guidance_scale = job_input.get("guidance_scale")
+    if guidance_scale is not None:
+        guidance_scale = float(guidance_scale)
+    negative_prompt = job_input.get("negative_prompt")
 
     if not lora_key:
         return {"error": "lora_key is required"}
 
+    start_time = time.time()
+
     lora_filename = download_lora(lora_key)
 
-    # If this LoRA wasn't present when ComfyUI started, restart so it sees it
     if lora_filename not in known_loras:
         print(f"New LoRA detected ({lora_filename}), restarting ComfyUI...")
         start_comfyui()
 
-    workflow = _build_workflow(prompt, width, height, steps, lora_scale)
+    workflow, actual_seed = _build_workflow(
+        prompt, width, height, steps, lora_scale,
+        seed=seed, guidance_scale=guidance_scale,
+        negative_prompt=negative_prompt,
+    )
 
-    # Inject the downloaded LoRA filename
     for node in workflow.values():
         if node.get("class_type") == "LoraLoader":
             node["inputs"]["lora_name"] = lora_filename
@@ -208,7 +230,22 @@ def handler(job):
     history = wait_for_job(prompt_id)
     images = upload_images_to_r2(history)
 
-    return {"images": images}
+    duration = round(time.time() - start_time, 2)
+
+    return {
+        "images": images,
+        "params": {
+            "prompt": prompt,
+            "negative_prompt": negative_prompt,
+            "width": width,
+            "height": height,
+            "steps": steps,
+            "lora_scale": lora_scale,
+            "seed": actual_seed,
+            "guidance_scale": guidance_scale,
+        },
+        "duration_seconds": duration,
+    }
 
 
 # ComfyUI is already started by start.sh — just wait for it to be ready

@@ -82,6 +82,16 @@ def set_model_failed(job_id):
     conn.close()
 
 
+def get_model_by_id(model_id):
+    conn = get_db()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("SELECT * FROM trained_models WHERE id = %s", (model_id,))
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+    return _to_dict(row) if row else None
+
+
 def get_model_by_job_id(job_id):
     conn = get_db()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)

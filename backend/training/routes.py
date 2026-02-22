@@ -6,7 +6,7 @@ from werkzeug.utils import secure_filename
 
 from services.r2 import upload_dataset
 from services.runpod import submit_job, get_job_status
-from models.trained_model import list_models, create_model, set_model_url, set_model_failed, get_model_by_job_id
+from models.trained_model import list_models, get_model_by_id, create_model, set_model_url, set_model_failed, get_model_by_job_id
 
 training_bp = Blueprint('training', __name__)
 
@@ -30,6 +30,18 @@ def get_models():
     """Return all trained models."""
     try:
         return jsonify({"models": list_models()})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@training_bp.route('/api/models/<int:model_id>', methods=['GET'])
+def get_model(model_id):
+    """Return a single trained model by database ID."""
+    try:
+        model = get_model_by_id(model_id)
+        if not model:
+            return jsonify({"error": "Model not found"}), 404
+        return jsonify(model)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -91,11 +103,11 @@ def training_status(job_id):
         else:
             status = "training"  # IN_QUEUE, IN_PROGRESS, etc.
 
-        result = {"status": status, "model_string": None}
+        result = {"status": status, "job_id": job_id, "model_string": None}
 
-        # Always attach DB metadata so the frontend has name + trigger_word
         db_record = get_model_by_job_id(job_id)
         if db_record:
+            result["model_id"] = db_record.get("id")
             result["model_name"] = db_record.get("name") or db_record.get("destination")
             result["trigger_word"] = db_record.get("trigger_word")
 

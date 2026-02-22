@@ -8,6 +8,16 @@ from models.database import get_db
 TEMPLATE_IMAGES_FOLDER = 'template_images'
 
 
+def _to_dict(r):
+    return {
+        "id": r["id"],
+        "name": r["name"],
+        "prompt": r["prompt"],
+        "image_url": f"/api/template-images/{r['image_filename']}",
+        "created_at": r["created_at"],
+    }
+
+
 def list_templates():
     conn = get_db()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -15,16 +25,17 @@ def list_templates():
     rows = cur.fetchall()
     cur.close()
     conn.close()
-    return [
-        {
-            "id": r["id"],
-            "name": r["name"],
-            "prompt": r["prompt"],
-            "image_url": f"/api/template-images/{r['image_filename']}",
-            "created_at": r["created_at"],
-        }
-        for r in rows
-    ]
+    return [_to_dict(r) for r in rows]
+
+
+def get_template(template_id):
+    conn = get_db()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("SELECT * FROM templates WHERE id = %s", (template_id,))
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+    return _to_dict(row) if row else None
 
 
 def create_template(name, prompt_text, image_filename):

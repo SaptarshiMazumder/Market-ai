@@ -15,19 +15,26 @@ def _headers():
 
 
 def submit_job(lora_key: str, prompt: str, width: int, height: int,
-               steps: int, lora_scale: float) -> str:
+               steps: int, lora_scale: float, seed: int | None = None,
+               guidance_scale: float | None = None,
+               negative_prompt: str | None = None) -> str:
     """Submit an image generation job to RunPod. Returns job_id."""
-    payload = {
-        "input": {
-            "lora_key": lora_key,
-            "prompt": prompt,
-            "width": width,
-            "height": height,
-            "steps": steps,
-            "lora_scale": lora_scale,
-        }
+    job_input = {
+        "lora_key": lora_key,
+        "prompt": prompt,
+        "width": width,
+        "height": height,
+        "steps": steps,
+        "lora_scale": lora_scale,
     }
-    r = requests.post(f"{BASE_URL}/run", headers=_headers(), json=payload)
+    if seed is not None:
+        job_input["seed"] = seed
+    if guidance_scale is not None:
+        job_input["guidance_scale"] = guidance_scale
+    if negative_prompt is not None:
+        job_input["negative_prompt"] = negative_prompt
+
+    r = requests.post(f"{BASE_URL}/run", headers=_headers(), json={"input": job_input})
     r.raise_for_status()
     return r.json()["id"]
 

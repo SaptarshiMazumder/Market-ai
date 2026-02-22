@@ -4,8 +4,11 @@ import uuid
 from flask import Blueprint, jsonify, request, send_file
 from werkzeug.utils import secure_filename
 
+import re
+
 from models.template import (
     list_templates as db_list_templates,
+    get_template as db_get_template,
     create_template as db_create_template,
     delete_template as db_delete_template,
 )
@@ -47,6 +50,46 @@ def create_template():
 
     except Exception as e:
         print(f"[Template] Error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@templates_bp.route('/api/templates/<template_id>', methods=['GET'])
+def get_template(template_id):
+    """Get a single template by ID."""
+    try:
+        template = db_get_template(template_id)
+        if not template:
+            return jsonify({"error": "Template not found"}), 404
+        return jsonify(template)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@templates_bp.route('/api/templates/<template_id>/resolve', methods=['POST'])
+def resolve_template(template_id):
+    """Resolve a template by replacing trigger_keyword with the provided trigger word."""
+    try:
+        template = db_get_template(template_id)
+        if not template:
+            return jsonify({"error": "Template not found"}), 404
+
+        data = request.json or {}
+        trigger_word = data.get("trigger_word")
+        if not trigger_word:
+            return jsonify({"error": "trigger_word is required"}), 400
+
+        resolved_prompt = re.sub(
+            r'trigger_keyword', trigger_word, template["prompt"], flags=re.IGNORECASE
+        )
+
+        return jsonify({
+            "template_id": template["id"],
+            "template_name": template["name"],
+            "original_prompt": template["prompt"],
+            "resolved_prompt": resolved_prompt,
+            "trigger_word": trigger_word,
+        })
+    except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
