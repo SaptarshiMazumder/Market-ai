@@ -1,13 +1,9 @@
 name: Build Trainer (marcusrashford)
 
 on:
-  workflow_dispatch:
+  push:
     branches: [experimental]
-    inputs:
-      tag:
-        description: "Docker image tag (e.g. v1)"
-        required: true
-        default: "latest"
+
 
 jobs:
   build-and-push:
@@ -26,4 +22,4 @@ jobs:
         with:
           context: ./microservices/training
           push: true
-          tags: marcusrashford/flux-exp-trainer:${{ github.event.inputs.tag }}
+          tags: marcusrashford/flux-exp-trainer:latest
