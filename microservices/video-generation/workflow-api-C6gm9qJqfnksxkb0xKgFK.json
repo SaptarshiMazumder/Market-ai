@@ -184,9 +184,9 @@
   },
   "63": {
     "inputs": {
-      "width": 1280,
-      "height": 704,
-      "length": 81,
+      "width": 832,
+      "height": 480,
+      "length": 33,
       "batch_size": 1,
       "positive": [
         "6",

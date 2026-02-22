@@ -11,7 +11,8 @@
       "WebFetch(domain:replicate.com)",
       "Bash(docker compose exec postgres psql:*)",
       "Bash(netstat:*)",
-      "Bash(powershell -command:*)"
+      "Bash(powershell -command:*)",
+      "WebFetch(domain:github.com)"
     ]
   }
 }

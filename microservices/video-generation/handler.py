@@ -65,12 +65,23 @@ def download_image(image_url: str) -> str:
     return "input.jpg"
 
 
-def build_workflow(prompt: str, seed: int) -> dict:
+def build_workflow(prompt: str, seed: int, width: int, height: int, length: int, steps: int) -> dict:
     with open(WORKFLOW_PATH) as f:
         workflow = copy.deepcopy(json.load(f))
 
     # Inject positive prompt
     workflow["6"]["inputs"]["text"] = prompt
+
+    # Inject resolution and frame count
+    workflow["63"]["inputs"]["width"] = width
+    workflow["63"]["inputs"]["height"] = height
+    workflow["63"]["inputs"]["length"] = length
+
+    # Inject steps into both samplers
+    workflow["57"]["inputs"]["steps"] = steps
+    workflow["57"]["inputs"]["end_at_step"] = steps // 2
+    workflow["58"]["inputs"]["steps"] = steps
+    workflow["58"]["inputs"]["start_at_step"] = steps // 2
 
     # Inject seed into the high-noise sampler (node 57)
     workflow["57"]["inputs"]["noise_seed"] = seed
@@ -129,6 +140,10 @@ def handler(job):
     job_input = job["input"]
     image_url = job_input.get("image_url")
     prompt = job_input.get("prompt", "A person stands confidently, the camera slowly circles around them.")
+    width = int(job_input.get("width", 832))
+    height = int(job_input.get("height", 480))
+    length = int(job_input.get("length", 33))
+    steps = int(job_input.get("steps", 20))
     seed = job_input.get("seed")
     if seed is None:
         seed = random.randint(0, 2**32 - 1)
@@ -141,7 +156,7 @@ def handler(job):
     start_time = time.time()
 
     download_image(image_url)
-    workflow = build_workflow(prompt, seed)
+    workflow = build_workflow(prompt, seed, width, height, length, steps)
 
     prompt_id = queue_workflow(workflow)
     print(f"Queued workflow: {prompt_id}")
