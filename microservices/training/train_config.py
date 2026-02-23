@@ -66,7 +66,7 @@ def build_config(params: dict, dataset_dir: str, output_dir: str) -> dict:
                         "noise_scheduler": "flowmatch",
                         "optimizer": "adamw8bit",
                         "lr": p["lr"],
-                        "ema_config": {"use_ema": True, "ema_decay": 0.99},
+                        "ema_config": {"use_ema": False, "ema_decay": 0.99},
                         "dtype": "bf16",
                     },
                     "model": {
