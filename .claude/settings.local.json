@@ -12,7 +12,8 @@
       "Bash(docker compose exec postgres psql:*)",
       "Bash(netstat:*)",
       "Bash(powershell -command:*)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:docs.comfy.org)"
     ]
   }
 }
