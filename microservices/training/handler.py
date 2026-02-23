@@ -51,18 +51,36 @@ def download_base_model(dest_dir: str) -> None:
         # If it fails, we hope the training fails later with a clear error
 
 
+def _build_r2_client():
+    account_id = os.environ["R2_ACCOUNT_ID"].strip()
+    return boto3.client(
+        "s3",
+        endpoint_url=f"https://{account_id}.r2.cloudflarestorage.com",
+        aws_access_key_id=os.environ["R2_ACCESS_KEY_ID"].strip(),
+        aws_secret_access_key=os.environ["R2_SECRET_ACCESS_KEY"].strip(),
+        config=Config(signature_version="s3v4"),
+        region_name="auto",
+    )
+
+
 def download_dataset(url: str, dest_dir: str) -> str:
-    """Download and extract a dataset zip from a public URL."""
+    """Download and extract a dataset zip from a public URL or R2."""
     zip_path = os.path.join(dest_dir, "dataset.zip")
     extract_dir = os.path.join(dest_dir, "dataset")
     os.makedirs(extract_dir, exist_ok=True)
 
-    print(f"Downloading dataset from {url}")
-    resp = requests.get(url, stream=True)
-    resp.raise_for_status()
-    with open(zip_path, "wb") as f:
-        for chunk in resp.iter_content(chunk_size=8192):
-            f.write(chunk)
+    if url.startswith("http://") or url.startswith("https://"):
+        print(f"Downloading dataset from {url}")
+        resp = requests.get(url, stream=True)
+        resp.raise_for_status()
+        with open(zip_path, "wb") as f:
+            for chunk in resp.iter_content(chunk_size=8192):
+                f.write(chunk)
+    else:
+        input_bucket = os.environ.get("R2_INPUT_BUCKET", "exp-train-dataset")
+        print(f"Downloading dataset from R2 bucket {input_bucket}, key {url}")
+        client = _build_r2_client()
+        client.download_file(input_bucket, url, zip_path)
 
     print("Extracting dataset...")
     with zipfile.ZipFile(zip_path, "r") as zf:
@@ -91,18 +109,6 @@ def find_final_safetensors(output_dir: str) -> str:
     if final:
         return sorted(final)[-1]
     return sorted(candidates)[-1]
-
-
-def _build_r2_client():
-    account_id = os.environ["R2_ACCOUNT_ID"].strip()
-    return boto3.client(
-        "s3",
-        endpoint_url=f"https://{account_id}.r2.cloudflarestorage.com",
-        aws_access_key_id=os.environ["R2_ACCESS_KEY_ID"].strip(),
-        aws_secret_access_key=os.environ["R2_SECRET_ACCESS_KEY"].strip(),
-        config=Config(signature_version="s3v4"),
-        region_name="auto",
-    )
 
 
 def upload_to_r2(local_path: str, bucket: str, key: str) -> str:
