@@ -3,10 +3,12 @@ set -e
 
 MODEL_DIR="/runpod-volume/FLUX.1-dev"
 
-TRANSFORMER_SHARD="$MODEL_DIR/transformer/diffusion_pytorch_model-00003-of-00003.safetensors"
+SHARD1="$MODEL_DIR/transformer/diffusion_pytorch_model-00001-of-00003.safetensors"
+SHARD2="$MODEL_DIR/transformer/diffusion_pytorch_model-00002-of-00003.safetensors"
+SHARD3="$MODEL_DIR/transformer/diffusion_pytorch_model-00003-of-00003.safetensors"
 TOKENIZER_FILE="$MODEL_DIR/tokenizer/merges.txt"
 
-if [ -f "$TRANSFORMER_SHARD" ] && [ -f "$TOKENIZER_FILE" ]; then
+if [ -f "$SHARD1" ] && [ -f "$SHARD2" ] && [ -f "$SHARD3" ] && [ -f "$TOKENIZER_FILE" ]; then
     echo "FLUX.1-dev already cached at $MODEL_DIR"
 else
     echo "Incomplete or missing model files. Cleaning up volume and re-downloading..."
