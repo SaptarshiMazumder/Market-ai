@@ -27,8 +27,16 @@ if [ -d "/runpod-volume/FLUX.1-dev" ]; then
     if [ ! -L "/comfyui/models/text_encoders/clip_l.safetensors" ]; then
         ln -s /runpod-volume/FLUX.1-dev/text_encoder/model.safetensors /comfyui/models/text_encoders/clip_l.safetensors
     fi
+    
+    # ComfyUI requires a single t5xxl_fp16.safetensors file, but the Diffusers repo shards it.
+    # If the single file isn't on the volume yet, download it directly from Comfy-Org's huggingface repo.
+    if [ ! -f "/runpod-volume/t5xxl_fp16.safetensors" ]; then
+        echo "Downloading standalone t5xxl_fp16.safetensors for ComfyUI..."
+        wget -O /runpod-volume/t5xxl_fp16.safetensors https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/t5xxl_fp16.safetensors
+    fi
+    
     if [ ! -L "/comfyui/models/text_encoders/t5xxl_fp16.safetensors" ]; then
-        ln -s /runpod-volume/FLUX.1-dev/text_encoder_2/model.safetensors /comfyui/models/text_encoders/t5xxl_fp16.safetensors
+        ln -s /runpod-volume/t5xxl_fp16.safetensors /comfyui/models/text_encoders/t5xxl_fp16.safetensors
     fi
     
     echo "Symlinks created successfully."
