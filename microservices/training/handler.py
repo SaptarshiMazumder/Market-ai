@@ -14,7 +14,7 @@ from train_config import write_config
 WORK_DIR = "/tmp/train_job"
 TOOLKIT_DIR = "/app/ai-toolkit"
 # /runpod-volume/FLUX.1-dev as default path for base model
-VOLUME_MODEL_PATH = os.environ.get("VOLUME_MODEL_PATH", "/runpod-volume/FLUX.1-dev")
+VOLUME_MODEL_PATH = "/runpod-volume/FLUX.1-dev"
 
 
 def download_base_model(dest_dir: str) -> None:
