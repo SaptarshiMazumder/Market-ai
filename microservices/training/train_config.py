@@ -5,7 +5,7 @@ import os
 
 VOLUME_MODEL_PATH = "/runpod-volume/FLUX.1-dev"
 DEFAULT_CONFIG = {
-    "trigger_word": "TOK",
+    "trigger_word": "CERAMIC_FLORAL_MUG",
     "steps": 2000,
     "lr": 1e-4,
     "resolution": [512, 768, 1024],
