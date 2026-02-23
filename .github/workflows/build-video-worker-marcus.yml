@@ -1,7 +1,10 @@
 name: Build Video Worker (marcusrashford)
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [experimental]
+    paths:
+      - 'microservices/video-generation/**'
 
 
 jobs:

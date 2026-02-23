@@ -1,7 +1,10 @@
 name: Build Image Worker (marcusrashford)
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [experimental]
+    paths:
+      - 'microservices/image-generation/**'
 
 jobs:
   build-and-push:
