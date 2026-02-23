@@ -248,12 +248,8 @@ def handler(job):
     }
 
 
-# ComfyUI is already started by start.sh — just wait for it to be ready
-print("Waiting for ComfyUI to be ready...")
-wait_for_comfyui()
-
-# Record which LoRAs ComfyUI knows about at startup
-known_loras = set(os.listdir(LORAS_DIR)) if os.path.exists(LORAS_DIR) else set()
-print(f"ComfyUI ready. Known LoRAs at startup: {known_loras}")
+# Start ComfyUI manually since our custom start.sh overwrote the base image's startup
+print("Starting ComfyUI...")
+start_comfyui()
 
 runpod.serverless.start({"handler": handler})
