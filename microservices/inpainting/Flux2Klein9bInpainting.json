@@ -355,13 +355,13 @@
   "156": {
     "inputs": {
       "seed": 663000248912719,
-      "steps": 4,
-      "inner_steps": 1,
+      "steps": 20,
+      "cfg": 5.0,
       "sampler_name": "euler",
-      "scheduler": "simple",
-      "outer_steps": 1,
-      "max_iters": 2,
-      "mode": "Image First",
+      "scheduler": "karras",
+      "denoise": 1.0,
+      "LanPaint_NumSteps": 5,
+      "LanPaint_PromptMode": "Image First",
       "model": [
         "126",
         0
