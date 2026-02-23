@@ -2,7 +2,6 @@ name: Build Trainer (marcusrashford)
 
 on:
   workflow_dispatch:
-    branches: [experimental]
 
 jobs:
   build-and-push:

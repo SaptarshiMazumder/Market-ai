@@ -2,7 +2,6 @@ name: Build Video Worker (marcusrashford)
 
 on:
   workflow_dispatch:
-    branches: [experimental]
 
 
 jobs:
