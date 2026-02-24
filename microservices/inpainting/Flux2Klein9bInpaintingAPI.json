@@ -52,7 +52,7 @@
   },
   "107": {
     "inputs": {
-      "text": "replace the object in the masked area",
+      "text": "man wearing headphone",
       "clip": [
         "146",
         0
@@ -95,6 +95,36 @@
     "class_type": "ImageScaleToTotalPixels",
     "_meta": {
       "title": "ImageScaleToTotalPixels"
+    }
+  },
+  "117": {
+    "inputs": {
+      "rgthree_comparer": {
+        "images": [
+          {
+            "name": "A",
+            "selected": true,
+            "url": "/api/view?filename=rgthree.compare._temp_lkkfv_00031_.png&type=temp&subfolder=&rand=0.6940193980429407"
+          },
+          {
+            "name": "B",
+            "selected": true,
+            "url": "/api/view?filename=rgthree.compare._temp_lkkfv_00032_.png&type=temp&subfolder=&rand=0.8860054736217181"
+          }
+        ]
+      },
+      "image_a": [
+        "149",
+        0
+      ],
+      "image_b": [
+        "104",
+        0
+      ]
+    },
+    "class_type": "Image Comparer (rgthree)",
+    "_meta": {
+      "title": "Image Comparer (rgthree)"
     }
   },
   "118": {
@@ -149,11 +179,11 @@
   },
   "121": {
     "inputs": {
-      "image": "reference_image.jpg"
+      "image": "719Xc9JaQ3L.webp"
     },
     "class_type": "LoadImage",
     "_meta": {
-      "title": "Load Image (Reference)"
+      "title": "Load Image"
     }
   },
   "125": {
@@ -282,11 +312,11 @@
   },
   "151": {
     "inputs": {
-      "image": "masked_scene.png"
+      "image": "ComfyUI_00022_.png"
     },
     "class_type": "LoadImage",
     "_meta": {
-      "title": "Load Image (Scene + Mask)"
+      "title": "Load Image"
     }
   },
   "152": {
@@ -305,19 +335,6 @@
       "title": "Set Latent Noise Mask"
     }
   },
-  "162": {
-    "inputs": {
-      "channel": "red",
-      "image": [
-        "151",
-        0
-      ]
-    },
-    "class_type": "ImageToMask",
-    "_meta": {
-      "title": "Image to Mask"
-    }
-  },
   "153": {
     "inputs": {
       "resize_type": "scale dimensions",
@@ -332,27 +349,27 @@
       "resize_type.crop": "center",
       "scale_method": "bicubic",
       "input": [
-        "162",
+        "161",
         0
       ]
     },
     "class_type": "ResizeImageMaskNode",
     "_meta": {
-      "title": "Resize Mask"
+      "title": "Resize Image/Mask"
     }
   },
   "156": {
     "inputs": {
-      "seed": 663000248912719,
+      "seed": 131712751028842,
       "steps": 4,
       "cfg": 1,
       "sampler_name": "euler",
       "scheduler": "simple",
-      "denoise": 1.0,
+      "denoise": 1,
       "LanPaint_NumSteps": 2,
-      "LanPaint_PromptMode": "Prompt First",
-      "LanPaint_Info": "LanPaint KSampler. For more info, visit https://github.com/scraed/LanPaint. If you find it useful, please give a star \u2b50\ufe0f!",
-      "Inpainting_mode": "\ud83d\uddbc\ufe0f Image Inpainting",
+      "LanPaint_PromptMode": "Image First",
+      "LanPaint_Info": "LanPaint KSampler. For more info, visit https://github.com/scraed/LanPaint. If you find it useful, please give a star ⭐️!",
+      "Inpainting_mode": "🖼️ Image Inpainting",
       "model": [
         "126",
         0
@@ -373,6 +390,31 @@
     "class_type": "LanPaint_KSampler",
     "_meta": {
       "title": "LanPaint KSampler"
+    }
+  },
+  "160": {
+    "inputs": {
+      "mask": [
+        "153",
+        0
+      ]
+    },
+    "class_type": "MaskPreview",
+    "_meta": {
+      "title": "Preview Mask"
+    }
+  },
+  "161": {
+    "inputs": {
+      "channel": "red",
+      "image": [
+        "151",
+        0
+      ]
+    },
+    "class_type": "ImageToMask",
+    "_meta": {
+      "title": "Convert Image to Mask"
     }
   }
 }

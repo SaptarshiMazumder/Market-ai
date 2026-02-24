@@ -10,7 +10,7 @@ import shutil
 import boto3
 from botocore.config import Config
 
-WORKFLOW_PATH = os.path.join(os.path.dirname(__file__), "Flux2Klein9bInpainting.json")
+WORKFLOW_PATH = os.path.join(os.path.dirname(__file__), "Flux2Klein9bInpaintingAPI.json")
 
 COMFYUI_URL = "http://127.0.0.1:8188"
 COMFYUI_INPUT_DIR = "/comfyui/input"
@@ -104,29 +104,30 @@ def upload_images_to_r2(history) -> list:
     """Fetch generated images from ComfyUI, upload to R2, return list of r2_paths."""
     client = _r2_client()
     results = []
-    for node_output in history["outputs"].values():
-        for img in node_output.get("images", []):
-            r = requests.get(
-                f"{COMFYUI_URL}/view",
-                params={
-                    "filename": img["filename"],
-                    "subfolder": img.get("subfolder", ""),
-                    "type": img.get("type", "output"),
-                },
-            )
-            r.raise_for_status()
-            key = f"generated/{uuid.uuid4()}_{img['filename']}"
-            client.put_object(
-                Bucket=R2_OUTPUT_BUCKET,
-                Key=key,
-                Body=r.content,
-                ContentType="image/png",
-            )
-            print(f"Uploaded to R2: {key}")
-            results.append({
-                "r2_path": f"r2://{R2_OUTPUT_BUCKET}/{key}",
+    # Only collect from node 9 (SaveImage) — other nodes output temp/preview images
+    save_node_output = history["outputs"].get("9", {})
+    for img in save_node_output.get("images", []):
+        r = requests.get(
+            f"{COMFYUI_URL}/view",
+            params={
                 "filename": img["filename"],
-            })
+                "subfolder": img.get("subfolder", ""),
+                "type": img.get("type", "output"),
+            },
+        )
+        r.raise_for_status()
+        key = f"generated/{uuid.uuid4()}_{img['filename']}"
+        client.put_object(
+            Bucket=R2_OUTPUT_BUCKET,
+            Key=key,
+            Body=r.content,
+            ContentType="image/png",
+        )
+        print(f"Uploaded to R2: {key}")
+        results.append({
+            "r2_path": f"r2://{R2_OUTPUT_BUCKET}/{key}",
+            "filename": img["filename"],
+        })
     return results
 
 
