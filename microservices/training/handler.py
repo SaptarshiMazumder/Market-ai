@@ -1,8 +1,17 @@
 """RunPod serverless handler for Flux LoRA training via ai-toolkit."""
 
 import runpod
+import torch
 import os
 import subprocess
+
+# VERSION: v2_monolithic_fix
+print("--- RUNPOD HANDLER VERSION: v2_monolithic_fix ---")
+if torch.cuda.is_available():
+    print(f"--- GPU DETECTED: {torch.cuda.get_device_name(0)} ---")
+else:
+    print("--- NO CUDA DEVICE DETECTED ---")
+
 import zipfile
 import glob
 import shutil

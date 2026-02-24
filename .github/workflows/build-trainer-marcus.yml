@@ -5,6 +5,12 @@ on:
     branches: [experimental]
     paths:
       - 'microservices/training/**'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Docker image tag (e.g. v2)"
+        required: true
+        default: "latest"
 
 jobs:
   build-and-push:
@@ -23,6 +29,8 @@ jobs:
         with:
           context: ./microservices/training
           push: true
-          tags: marcusrashford/flux-exp-trainer:latest
+          tags: |
+            marcusrashford/flux-exp-trainer:latest
+            marcusrashford/flux-exp-trainer:${{ github.event.inputs.tag || 'latest' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
