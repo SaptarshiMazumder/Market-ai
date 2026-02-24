@@ -12,8 +12,12 @@ if [ -f "$CHECK_FILE" ]; then
 else
     echo "FLUX.2-klein-4B not found or incomplete. Downloading to volume..."
     
-    # We purposefully DO NOT wipe the whole volume here because FLUX.1 might still be on it.
-    # We only clean up the target directory for FLUX.2
+    # We must wipe the old FLUX.1 model because the 80GB volume is entirely full!
+    # (FLUX.1 + T5 standalone + Old AI Toolkit checkpoints = 80GB maxed out)
+    echo "Freeing up 45GB of space by removing older FLUX.1 models..."
+    rm -rf /runpod-volume/FLUX.1-dev
+    rm -rf /runpod-volume/hf-cache/*
+    
     mkdir -p "$MODEL_DIR"
     mkdir -p "$CACHE_DIR"
     rm -rf "$MODEL_DIR/*"
