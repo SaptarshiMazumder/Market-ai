@@ -3,7 +3,7 @@
 import yaml
 import os
 
-VOLUME_MODEL_PATH = "/runpod-volume/FLUX.1-dev"
+VOLUME_MODEL_PATH = "/runpod-volume/FLUX.2-klein-4B"
 DEFAULT_CONFIG = {
     "trigger_word": "CERAMIC_FLORAL_MUG",
     "steps": 2000,
