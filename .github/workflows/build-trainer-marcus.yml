@@ -31,6 +31,6 @@ jobs:
           push: true
           tags: |
             marcusrashford/flux-exp-trainer:latest
-            marcusrashford/flux-exp-trainer:${{ github.event.inputs.tag || 'latest' }}
+            marcusrashford/flux-exp-trainer:v2
           cache-from: type=gha
           cache-to: type=gha,mode=max
