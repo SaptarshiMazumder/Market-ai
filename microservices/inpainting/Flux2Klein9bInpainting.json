@@ -296,7 +296,7 @@
         0
       ],
       "mask": [
-        "163",
+        "153",
         0
       ]
     },
@@ -305,51 +305,40 @@
       "title": "Set Latent Noise Mask"
     }
   },
-  "161": {
-    "inputs": {
-      "mask": [
-        "151",
-        1
-      ]
-    },
-    "class_type": "MaskToImage",
-    "_meta": {
-      "title": "Mask to Image"
-    }
-  },
   "162": {
-    "inputs": {
-      "upscale_method": "lanczos",
-      "width": [
-        "148",
-        0
-      ],
-      "height": [
-        "148",
-        1
-      ],
-      "crop": "center",
-      "image": [
-        "161",
-        0
-      ]
-    },
-    "class_type": "ImageScale",
-    "_meta": {
-      "title": "Scale Mask Image"
-    }
-  },
-  "163": {
     "inputs": {
       "channel": "red",
       "image": [
-        "162",
+        "151",
         0
       ]
     },
     "class_type": "ImageToMask",
     "_meta": {
       "title": "Image to Mask"
+    }
+  },
+  "153": {
+    "inputs": {
+      "resize_type": "scale dimensions",
+      "resize_type.width": [
+        "148",
+        0
+      ],
+      "resize_type.height": [
+        "148",
+        1
+      ],
+      "resize_type.crop": "center",
+      "scale_method": "bicubic",
+      "input": [
+        "162",
+        0
+      ]
+    },
+    "class_type": "ResizeImageMaskNode",
+    "_meta": {
+      "title": "Resize Mask"
     }
   },
   "156": {
@@ -361,7 +350,7 @@
       "scheduler": "simple",
       "denoise": 1.0,
       "LanPaint_NumSteps": 2,
-      "LanPaint_PromptMode": "Image First",
+      "LanPaint_PromptMode": "Prompt First",
       "LanPaint_Info": "LanPaint KSampler. For more info, visit https://github.com/scraed/LanPaint. If you find it useful, please give a star \u2b50\ufe0f!",
       "Inpainting_mode": "\ud83d\uddbc\ufe0f Image Inpainting",
       "model": [
