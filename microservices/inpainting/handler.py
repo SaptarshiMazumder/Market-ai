@@ -45,7 +45,7 @@ def wait_for_comfyui(timeout=300):
 
 
 def download_to_input(image_url: str, dest_filename: str) -> str:
-    """Download image from R2 into ComfyUI input dir with a fixed filename."""
+    """Download an image from R2 into ComfyUI's input directory."""
     if image_url.startswith("r2://"):
         parts = image_url[5:].split("/", 1)
         bucket, key = parts[0], parts[1]
@@ -56,22 +56,28 @@ def download_to_input(image_url: str, dest_filename: str) -> str:
     tmp_path = f"/tmp/dl_{dest_filename}"
     dest = os.path.join(COMFYUI_INPUT_DIR, dest_filename)
 
-    print(f"Downloading {dest_filename} from R2: bucket={bucket} key={key}")
+    print(f"Downloading {key} from R2 bucket {bucket}")
     os.makedirs(COMFYUI_INPUT_DIR, exist_ok=True)
     _r2_client().download_file(bucket, key, tmp_path)
     shutil.copy(tmp_path, dest)
     print(f"Ready at {dest}")
-    return os.path.basename(dest)
+    return dest_filename
 
 
-def build_workflow(prompt: str, seed: int) -> dict:
+def build_workflow(scene_filename: str, reference_filename: str, prompt: str, seed: int) -> dict:
     with open(WORKFLOW_PATH) as f:
         workflow = copy.deepcopy(json.load(f))
 
-    # Inject prompt
+    # Scene image (with alpha mask) — LoadImage node 151
+    workflow["151"]["inputs"]["image"] = scene_filename
+
+    # Reference image — LoadImage node 121
+    workflow["121"]["inputs"]["image"] = reference_filename
+
+    # Positive prompt — CLIPTextEncode node 107
     workflow["107"]["inputs"]["text"] = prompt
 
-    # Inject seed
+    # Seed — LanPaint_KSampler node 156
     workflow["156"]["inputs"]["seed"] = seed
 
     return workflow
@@ -116,7 +122,7 @@ def upload_images_to_r2(history) -> list:
                 Body=r.content,
                 ContentType="image/png",
             )
-            print(f"Uploaded image to R2: {key}")
+            print(f"Uploaded to R2: {key}")
             results.append({
                 "r2_path": f"r2://{R2_OUTPUT_BUCKET}/{key}",
                 "filename": img["filename"],
@@ -126,31 +132,28 @@ def upload_images_to_r2(history) -> list:
 
 def handler(job):
     job_input = job["input"]
-    scene_url = job_input.get("scene_url")       # main image with alpha mask painted
-    reference_url = job_input.get("reference_url")  # reference object image
-    prompt = job_input.get("prompt", "replace the object in the masked area")
+
+    scene_url = job_input.get("scene_url")
+    reference_url = job_input.get("reference_url")
+    prompt = job_input.get("prompt", "a spray can in her hand")
     seed = job_input.get("seed")
+
+    if not scene_url:
+        return {"error": "scene_url is required"}
+    if not reference_url:
+        return {"error": "reference_url is required"}
+
     if seed is None:
         seed = random.randint(0, 2**32 - 1)
     else:
         seed = int(seed)
 
-    if not scene_url:
-        return {"error": "scene_url is required (PNG with alpha channel as mask)"}
-    if not reference_url:
-        return {"error": "reference_url is required"}
-
     start_time = time.time()
 
-    # Download both images into ComfyUI input dir
     scene_filename = download_to_input(scene_url, "masked_scene.png")
-    ref_filename = download_to_input(reference_url, "reference_image.jpg")
+    reference_filename = download_to_input(reference_url, "reference_image.jpg")
 
-    workflow = build_workflow(prompt, seed)
-
-    # Make sure filenames match what's in the workflow JSON
-    workflow["151"]["inputs"]["image"] = scene_filename
-    workflow["121"]["inputs"]["image"] = ref_filename
+    workflow = build_workflow(scene_filename, reference_filename, prompt, seed)
 
     prompt_id = queue_workflow(workflow)
     print(f"Queued workflow: {prompt_id}")
