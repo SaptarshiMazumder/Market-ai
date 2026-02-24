@@ -71,8 +71,9 @@ def build_config(params: dict, dataset_dir: str, output_dir: str) -> dict:
                     },
                     "model": {
                         "name_or_path": VOLUME_MODEL_PATH,
-                        "is_flux": True,
+                        "arch": "flux2",
                         "quantize": True,
+                        "quantize_te": True,
                     },
                     "sample": {
                         "sampler": "flowmatch",
