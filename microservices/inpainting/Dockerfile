@@ -14,4 +14,3 @@ COPY handler.py /handler.py
 COPY Flux2Klein9bInpainting.json /Flux2Klein9bInpainting.json
 
 WORKDIR /comfyui
-CMD ["python3", "-u", "/handler.py"]
