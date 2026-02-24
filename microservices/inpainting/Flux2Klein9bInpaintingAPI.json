@@ -97,36 +97,6 @@
       "title": "ImageScaleToTotalPixels"
     }
   },
-  "117": {
-    "inputs": {
-      "rgthree_comparer": {
-        "images": [
-          {
-            "name": "A",
-            "selected": true,
-            "url": "/api/view?filename=rgthree.compare._temp_lkkfv_00031_.png&type=temp&subfolder=&rand=0.6940193980429407"
-          },
-          {
-            "name": "B",
-            "selected": true,
-            "url": "/api/view?filename=rgthree.compare._temp_lkkfv_00032_.png&type=temp&subfolder=&rand=0.8860054736217181"
-          }
-        ]
-      },
-      "image_a": [
-        "149",
-        0
-      ],
-      "image_b": [
-        "104",
-        0
-      ]
-    },
-    "class_type": "Image Comparer (rgthree)",
-    "_meta": {
-      "title": "Image Comparer (rgthree)"
-    }
-  },
   "118": {
     "inputs": {
       "conditioning": [
