@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:comfyanonymous.github.io)",
+      "Bash(python3 -c \":*)",
+      "WebFetch(domain:www.nextdiffusion.ai)"
+    ]
+  }
+}

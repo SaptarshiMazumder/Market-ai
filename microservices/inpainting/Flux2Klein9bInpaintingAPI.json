@@ -97,6 +97,36 @@
       "title": "ImageScaleToTotalPixels"
     }
   },
+  "117": {
+    "inputs": {
+      "rgthree_comparer": {
+        "images": [
+          {
+            "name": "A",
+            "selected": true,
+            "url": "/api/view?filename=rgthree.compare._temp_lkkfv_00031_.png&type=temp&subfolder=&rand=0.6940193980429407"
+          },
+          {
+            "name": "B",
+            "selected": true,
+            "url": "/api/view?filename=rgthree.compare._temp_lkkfv_00032_.png&type=temp&subfolder=&rand=0.8860054736217181"
+          }
+        ]
+      },
+      "image_a": [
+        "149",
+        0
+      ],
+      "image_b": [
+        "104",
+        0
+      ]
+    },
+    "class_type": "Image Comparer (rgthree)",
+    "_meta": {
+      "title": "Image Comparer (rgthree)"
+    }
+  },
   "118": {
     "inputs": {
       "conditioning": [
@@ -296,7 +326,7 @@
         0
       ],
       "mask": [
-        "165",
+        "153",
         0
       ]
     },
@@ -305,51 +335,27 @@
       "title": "Set Latent Noise Mask"
     }
   },
-  "163": {
+  "153": {
     "inputs": {
-      "mask": [
+      "resize_type": "scale dimensions",
+      "resize_type.width": [
+        "148",
+        0
+      ],
+      "resize_type.height": [
+        "148",
+        1
+      ],
+      "resize_type.crop": "center",
+      "scale_method": "bicubic",
+      "input": [
         "161",
         0
       ]
     },
-    "class_type": "MaskToImage",
+    "class_type": "ResizeImageMaskNode",
     "_meta": {
-      "title": "Mask to Image"
-    }
-  },
-  "164": {
-    "inputs": {
-      "upscale_method": "lanczos",
-      "width": [
-        "148",
-        0
-      ],
-      "height": [
-        "148",
-        1
-      ],
-      "crop": "center",
-      "image": [
-        "163",
-        0
-      ]
-    },
-    "class_type": "ImageScale",
-    "_meta": {
-      "title": "Scale Mask to Scene Size"
-    }
-  },
-  "165": {
-    "inputs": {
-      "channel": "red",
-      "image": [
-        "164",
-        0
-      ]
-    },
-    "class_type": "ImageToMask",
-    "_meta": {
-      "title": "Image to Mask"
+      "title": "Resize Image/Mask"
     }
   },
   "156": {
@@ -384,6 +390,18 @@
     "class_type": "LanPaint_KSampler",
     "_meta": {
       "title": "LanPaint KSampler"
+    }
+  },
+  "160": {
+    "inputs": {
+      "mask": [
+        "153",
+        0
+      ]
+    },
+    "class_type": "MaskPreview",
+    "_meta": {
+      "title": "Preview Mask"
     }
   },
   "161": {

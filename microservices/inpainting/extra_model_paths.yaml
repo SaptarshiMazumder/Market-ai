@@ -1,0 +1,9 @@
+# Tells ComfyUI to also look for models in the RunPod network volume.
+# The volume is mounted at /runpod-volume at runtime.
+comfyui:
+    base_path: /runpod-volume
+    unet: models/unet/
+    vae: models/vae/
+    clip: models/clip/
+    checkpoints: models/checkpoints/
+    loras: models/loras/

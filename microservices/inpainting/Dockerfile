@@ -1,14 +1,20 @@
-FROM runpod/worker-comfyui:5.5.1-base
+FROM runpod/worker-comfyui:5.7.1-base
 
-# --- LAYER 1: Custom nodes ---
-RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
-RUN git clone https://github.com/scraed/LanPaint.git /comfyui/custom_nodes/LanPaint
+# Custom nodes
+RUN apt-get update && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/*
 
-# --- LAYER 3: Python dependencies ---
+# LanPaint — provides LanPaint_KSampler (required by this workflow)
+RUN git clone --depth 1 https://github.com/scraed/LanPaint.git \
+        /comfyui/custom_nodes/LanPaint \
+    && pip install --no-cache-dir -e /comfyui/custom_nodes/LanPaint
+
+# R2 client
 RUN pip install --no-cache-dir boto3
 
-# --- LAYER 4: App code ---
+# App code
 COPY handler.py /handler.py
 COPY Flux2Klein9bInpaintingAPI.json /Flux2Klein9bInpaintingAPI.json
+COPY extra_model_paths.yaml /comfyui/extra_model_paths.yaml
 
 WORKDIR /comfyui
