@@ -1,5 +1,11 @@
 FROM runpod/worker-comfyui:5.7.1-base
 
+# Update ComfyUI for Flux 2 support (base image ships v0.6.0 which lacks Qwen text encoder)
+RUN cd /comfyui \
+    && git fetch origin \
+    && git reset --hard origin/master \
+    && pip install --no-cache-dir -r requirements.txt
+
 # Custom nodes
 RUN apt-get update && apt-get install -y --no-install-recommends git \
     && rm -rf /var/lib/apt/lists/*

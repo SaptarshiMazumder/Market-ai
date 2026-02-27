@@ -38,13 +38,13 @@ huggingface-cli download \
     ${HF_TOKEN:+--token "$HF_TOKEN"}
 mv /tmp/hf_dl/split_files/vae/flux2-vae.safetensors "$VOLUME/models/vae/flux2-vae.safetensors"
 
-echo "=== Downloading CLIP: qwen_3_8b.safetensors (~5 GB) ==="
+echo "=== Downloading CLIP: qwen_3_8b.safetensors (fp8 mixed, ~8.7 GB) ==="
 huggingface-cli download \
     Comfy-Org/flux2-klein-9B \
-    split_files/text_encoders/qwen_3_8b_fp4mixed.safetensors \
+    split_files/text_encoders/qwen_3_8b_fp8mixed.safetensors \
     --local-dir /tmp/hf_dl \
     ${HF_TOKEN:+--token "$HF_TOKEN"}
-mv /tmp/hf_dl/split_files/text_encoders/qwen_3_8b_fp4mixed.safetensors "$VOLUME/models/clip/qwen_3_8b.safetensors"
+mv /tmp/hf_dl/split_files/text_encoders/qwen_3_8b_fp8mixed.safetensors "$VOLUME/models/clip/qwen_3_8b.safetensors"
 
 rm -rf /tmp/hf_dl
 
