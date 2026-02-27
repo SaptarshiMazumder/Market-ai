@@ -326,7 +326,7 @@
         0
       ],
       "mask": [
-        "153",
+        "202",
         0
       ]
     },
@@ -335,27 +335,51 @@
       "title": "Set Latent Noise Mask"
     }
   },
-  "153": {
+  "200": {
     "inputs": {
-      "resize_type": "scale dimensions",
-      "resize_type.width": [
-        "148",
-        0
-      ],
-      "resize_type.height": [
-        "148",
-        1
-      ],
-      "resize_type.crop": "center",
-      "scale_method": "bicubic",
-      "input": [
+      "mask": [
         "161",
         0
       ]
     },
-    "class_type": "ResizeImageMaskNode",
+    "class_type": "MaskToImage",
     "_meta": {
-      "title": "Resize Image/Mask"
+      "title": "Convert Mask to Image"
+    }
+  },
+  "201": {
+    "inputs": {
+      "upscale_method": "bicubic",
+      "width": [
+        "148",
+        0
+      ],
+      "height": [
+        "148",
+        1
+      ],
+      "crop": "center",
+      "image": [
+        "200",
+        0
+      ]
+    },
+    "class_type": "ImageScale",
+    "_meta": {
+      "title": "Resize Mask (as Image)"
+    }
+  },
+  "202": {
+    "inputs": {
+      "channel": "red",
+      "image": [
+        "201",
+        0
+      ]
+    },
+    "class_type": "ImageToMask",
+    "_meta": {
+      "title": "Convert Back to Mask"
     }
   },
   "156": {
@@ -395,7 +419,7 @@
   "160": {
     "inputs": {
       "mask": [
-        "153",
+        "202",
         0
       ]
     },

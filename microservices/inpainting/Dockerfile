@@ -1,8 +1,5 @@
 FROM runpod/worker-comfyui:5.7.1-base
 
-# Update ComfyUI to latest (base image may lag behind; needed for ResizeImageMaskNode)
-RUN cd /comfyui && git pull origin master
-
 # Custom nodes
 RUN apt-get update && apt-get install -y --no-install-recommends git \
     && rm -rf /var/lib/apt/lists/*
