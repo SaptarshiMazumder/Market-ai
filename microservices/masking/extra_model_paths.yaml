@@ -1,0 +1,8 @@
+# Tells ComfyUI to also look for models in the RunPod network volume.
+# The volume is mounted at /runpod-volume at runtime.
+# Note: SAM2 and Florence2 custom nodes use folder_paths.models_dir directly,
+# so symlinks are created in the Dockerfile for those (sam2, LLM).
+comfyui:
+    base_path: /runpod-volume
+    checkpoints: models/checkpoints/
+    loras: models/loras/
