@@ -35,10 +35,21 @@ wget "https://huggingface.co/Kijai/sam2-safetensors/resolve/main/sam2_hiera_base
 Florence 2 Large (~1.5 GB, multi-file model):
 
 ```bash
-pip install -U huggingface_hub
-huggingface-cli download microsoft/Florence-2-large \
-  --local-dir /workspace/models/LLM/Florence-2-large \
-  --local-dir-use-symlinks False
+mkdir -p /workspace/models/LLM/Florence-2-large
+
+BASE="https://huggingface.co/microsoft/Florence-2-large/resolve/main"
+DIR="/workspace/models/LLM/Florence-2-large"
+
+wget "$BASE/model.safetensors"          -O "$DIR/model.safetensors"
+wget "$BASE/config.json"                -O "$DIR/config.json"
+wget "$BASE/configuration_florence2.py" -O "$DIR/configuration_florence2.py"
+wget "$BASE/modeling_florence2.py"      -O "$DIR/modeling_florence2.py"
+wget "$BASE/processing_florence2.py"    -O "$DIR/processing_florence2.py"
+wget "$BASE/preprocessor_config.json"   -O "$DIR/preprocessor_config.json"
+wget "$BASE/tokenizer.json"             -O "$DIR/tokenizer.json"
+wget "$BASE/tokenizer_config.json"      -O "$DIR/tokenizer_config.json"
+wget "$BASE/vocab.json"                 -O "$DIR/vocab.json"
+wget "$BASE/generation_config.json"     -O "$DIR/generation_config.json"
 ```
 
 ### Verify

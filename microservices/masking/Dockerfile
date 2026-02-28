@@ -16,6 +16,14 @@ RUN git clone --depth 1 https://github.com/kijai/ComfyUI-Florence2.git \
     && ([ -f /comfyui/custom_nodes/ComfyUI-Florence2/requirements.txt ] \
         && pip install --no-cache-dir -r /comfyui/custom_nodes/ComfyUI-Florence2/requirements.txt || true)
 
+# ComfyUI-Impact-Pack (Dilate Mask)
+RUN git clone --depth 1 https://github.com/ltdrdata/ComfyUI-Impact-Pack.git \
+        /comfyui/custom_nodes/ComfyUI-Impact-Pack \
+    && ([ -f /comfyui/custom_nodes/ComfyUI-Impact-Pack/requirements.txt ] \
+        && pip install --no-cache-dir -r /comfyui/custom_nodes/ComfyUI-Impact-Pack/requirements.txt || true) \
+    && ([ -f /comfyui/custom_nodes/ComfyUI-Impact-Pack/install.py ] \
+        && python /comfyui/custom_nodes/ComfyUI-Impact-Pack/install.py || true)
+
 # ComfyUI_essentials (MaskBlur+)
 RUN git clone --depth 1 https://github.com/cubiq/ComfyUI_essentials.git \
         /comfyui/custom_nodes/ComfyUI_essentials \

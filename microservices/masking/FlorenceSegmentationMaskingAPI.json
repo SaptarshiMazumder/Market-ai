@@ -93,13 +93,26 @@
       "title": "SAM2 Segmentation"
     }
   },
-  "104": {
+  "110": {
     "inputs": {
       "mask": [
         "102",
         0
       ],
-      "amount": 10,
+      "dilation": 50
+    },
+    "class_type": "ImpactDilateMask",
+    "_meta": {
+      "title": "Dilate Mask"
+    }
+  },
+  "104": {
+    "inputs": {
+      "mask": [
+        "110",
+        0
+      ],
+      "amount": 50,
       "device": "auto"
     },
     "class_type": "MaskBlur+",

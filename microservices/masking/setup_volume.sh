@@ -14,18 +14,25 @@ VOLUME=/workspace
 mkdir -p "$VOLUME/models/sam2"
 mkdir -p "$VOLUME/models/LLM"
 
-pip install -q -U huggingface_hub
-
 echo "=== Downloading SAM2: sam2_hiera_base_plus.safetensors (~350 MB) ==="
-wget -q --show-progress \
-    "https://huggingface.co/Kijai/sam2-safetensors/resolve/main/sam2_hiera_base_plus.safetensors" \
+wget "https://huggingface.co/Kijai/sam2-safetensors/resolve/main/sam2_hiera_base_plus.safetensors" \
     -O "$VOLUME/models/sam2/sam2_hiera_base_plus.safetensors"
 
 echo "=== Downloading Florence 2 Large (~1.5 GB) ==="
-huggingface-cli download \
-    microsoft/Florence-2-large \
-    --local-dir "$VOLUME/models/LLM/Florence-2-large" \
-    --local-dir-use-symlinks False
+mkdir -p "$VOLUME/models/LLM/Florence-2-large"
+BASE="https://huggingface.co/microsoft/Florence-2-large/resolve/main"
+DIR="$VOLUME/models/LLM/Florence-2-large"
+
+wget "$BASE/model.safetensors"          -O "$DIR/model.safetensors"
+wget "$BASE/config.json"                -O "$DIR/config.json"
+wget "$BASE/configuration_florence2.py" -O "$DIR/configuration_florence2.py"
+wget "$BASE/modeling_florence2.py"      -O "$DIR/modeling_florence2.py"
+wget "$BASE/processing_florence2.py"    -O "$DIR/processing_florence2.py"
+wget "$BASE/preprocessor_config.json"   -O "$DIR/preprocessor_config.json"
+wget "$BASE/tokenizer.json"             -O "$DIR/tokenizer.json"
+wget "$BASE/tokenizer_config.json"      -O "$DIR/tokenizer_config.json"
+wget "$BASE/vocab.json"                 -O "$DIR/vocab.json"
+wget "$BASE/generation_config.json"     -O "$DIR/generation_config.json"
 
 echo ""
 echo "=== Done. Network volume contents ==="
