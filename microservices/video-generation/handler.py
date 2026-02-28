@@ -95,15 +95,13 @@ def queue_workflow(workflow):
     return r.json()["prompt_id"]
 
 
-def wait_for_job(prompt_id, timeout=600):
-    start = time.time()
-    while time.time() - start < timeout:
+def wait_for_job(prompt_id):
+    while True:
         r = requests.get(f"{COMFYUI_URL}/history/{prompt_id}")
         history = r.json()
         if prompt_id in history:
             return history[prompt_id]
         time.sleep(2)
-    raise TimeoutError(f"Job {prompt_id} timed out")
 
 
 def upload_video_to_r2(history) -> list:
@@ -171,6 +169,10 @@ def handler(job):
         "params": {
             "prompt": prompt,
             "seed": seed,
+            "width": width,
+            "height": height,
+            "length": length,
+            "steps": steps,
         },
         "duration_seconds": duration,
     }

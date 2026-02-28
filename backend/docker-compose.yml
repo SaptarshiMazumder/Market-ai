@@ -77,9 +77,66 @@ services:
       - postgres
     restart: unless-stopped
 
+  masking:
+    build: ./masking
+    ports:
+      - "5004:5004"
+    env_file:
+      - ./masking/.env
+    environment:
+      - PGHOST=postgres
+      - PGPORT=5432
+      - PGDATABASE=training
+      - PGUSER=training
+      - PGPASSWORD=training
+    volumes:
+      - masking-output:/app/masks
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  inpainting:
+    build: ./inpainting
+    ports:
+      - "5005:5005"
+    env_file:
+      - ./inpainting/.env
+    environment:
+      - PGHOST=postgres
+      - PGPORT=5432
+      - PGDATABASE=training
+      - PGUSER=training
+      - PGPASSWORD=training
+    volumes:
+      - inpainting-output:/app/inpainted
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  video-generation:
+    build: ./video-generation
+    ports:
+      - "5006:5006"
+    env_file:
+      - ./video-generation/.env
+    environment:
+      - PGHOST=postgres
+      - PGPORT=5432
+      - PGDATABASE=training
+      - PGUSER=training
+      - PGPASSWORD=training
+    volumes:
+      - video-output:/app/videos
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
 volumes:
   postgres-data:
   training-uploads:
   generation-uploads:
   generation-output:
   templates-images:
+  masking-output:
+  inpainting-output:
+  video-output:

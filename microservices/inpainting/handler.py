@@ -106,7 +106,8 @@ def _strip_display_nodes(workflow: dict) -> dict:
     return workflow
 
 
-def build_workflow(scene_filename: str, reference_filename: str, prompt: str, seed: int) -> dict:
+def build_workflow(scene_filename: str, reference_filename: str, prompt: str, seed: int,
+                   steps: int = 4, denoise: float = 1.0, guidance: float = 4.0) -> dict:
     with open(WORKFLOW_PATH) as f:
         workflow = copy.deepcopy(json.load(f))
 
@@ -119,8 +120,13 @@ def build_workflow(scene_filename: str, reference_filename: str, prompt: str, se
     # Positive prompt — CLIPTextEncode node 107
     workflow["107"]["inputs"]["text"] = prompt
 
-    # Seed — LanPaint_KSampler node 156
+    # LanPaint_KSampler node 156
     workflow["156"]["inputs"]["seed"] = seed
+    workflow["156"]["inputs"]["steps"] = steps
+    workflow["156"]["inputs"]["denoise"] = denoise
+
+    # FluxGuidance node 100
+    workflow["100"]["inputs"]["guidance"] = guidance
 
     return _strip_display_nodes(workflow)
 
@@ -188,6 +194,9 @@ def handler(job):
     reference_url = job_input.get("reference_url") # product / reference image
     prompt = job_input.get("prompt", "product on a surface")
     seed = job_input.get("seed")
+    steps = job_input.get("steps", 4)
+    denoise = job_input.get("denoise", 1.0)
+    guidance = job_input.get("guidance", 4.0)
 
     if not scene_url:
         return {"error": "scene_url is required (masked scene PNG with mask in red channel)"}
@@ -195,13 +204,16 @@ def handler(job):
         return {"error": "reference_url is required (product/reference image)"}
 
     seed = random.randint(0, 2**32 - 1) if seed is None else int(seed)
+    steps = int(steps)
+    denoise = float(denoise)
+    guidance = float(guidance)
 
     start_time = time.time()
 
     scene_filename = download_to_input(scene_url, "masked_scene.png")
     reference_filename = download_to_input(reference_url, "reference_image.jpg")
 
-    workflow = build_workflow(scene_filename, reference_filename, prompt, seed)
+    workflow = build_workflow(scene_filename, reference_filename, prompt, seed, steps, denoise, guidance)
 
     prompt_id = queue_workflow(workflow)
     print(f"Queued workflow prompt_id={prompt_id}")
@@ -212,7 +224,7 @@ def handler(job):
     duration = round(time.time() - start_time, 2)
     return {
         "images": images,
-        "params": {"prompt": prompt, "seed": seed},
+        "params": {"prompt": prompt, "seed": seed, "steps": steps, "denoise": denoise, "guidance": guidance},
         "duration_seconds": duration,
     }
 
