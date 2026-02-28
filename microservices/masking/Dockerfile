@@ -7,12 +7,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends git \
 # ComfyUI-segment-anything-2 (SAM2 segmentation + Florence2toCoordinates)
 RUN git clone --depth 1 https://github.com/kijai/ComfyUI-segment-anything-2.git \
         /comfyui/custom_nodes/ComfyUI-segment-anything-2 \
-    && pip install --no-cache-dir -r /comfyui/custom_nodes/ComfyUI-segment-anything-2/requirements.txt
+    && ([ -f /comfyui/custom_nodes/ComfyUI-segment-anything-2/requirements.txt ] \
+        && pip install --no-cache-dir -r /comfyui/custom_nodes/ComfyUI-segment-anything-2/requirements.txt || true)
 
 # ComfyUI-Florence2 (Florence 2 model loader + inference)
 RUN git clone --depth 1 https://github.com/kijai/ComfyUI-Florence2.git \
         /comfyui/custom_nodes/ComfyUI-Florence2 \
-    && pip install --no-cache-dir -r /comfyui/custom_nodes/ComfyUI-Florence2/requirements.txt
+    && ([ -f /comfyui/custom_nodes/ComfyUI-Florence2/requirements.txt ] \
+        && pip install --no-cache-dir -r /comfyui/custom_nodes/ComfyUI-Florence2/requirements.txt || true)
 
 # ComfyUI_essentials (MaskBlur+)
 RUN git clone --depth 1 https://github.com/cubiq/ComfyUI_essentials.git \
