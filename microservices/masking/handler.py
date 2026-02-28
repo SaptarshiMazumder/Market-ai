@@ -97,7 +97,8 @@ def _strip_display_nodes(workflow: dict) -> dict:
     return workflow
 
 
-def build_workflow(image_filename: str, object_name: str, seed: int) -> dict:
+def build_workflow(image_filename: str, object_name: str, seed: int,
+                   mask_dilation: int = 50, mask_blur: int = 50) -> dict:
     with open(WORKFLOW_PATH) as f:
         workflow = copy.deepcopy(json.load(f))
 
@@ -107,6 +108,12 @@ def build_workflow(image_filename: str, object_name: str, seed: int) -> dict:
     # Object to detect — Florence2Run node 87
     workflow["87"]["inputs"]["text_input"] = object_name
     workflow["87"]["inputs"]["seed"] = seed
+
+    # Mask dilation — ImpactDilateMask node 110
+    workflow["110"]["inputs"]["dilation"] = mask_dilation
+
+    # Mask blur — MaskBlur+ node 104
+    workflow["104"]["inputs"]["amount"] = mask_blur
 
     return _strip_display_nodes(workflow)
 
@@ -173,6 +180,8 @@ def handler(job):
     image_url = job_input.get("image_url")
     object_name = job_input.get("object_name")
     seed = job_input.get("seed")
+    mask_dilation = job_input.get("mask_dilation", 50)
+    mask_blur = job_input.get("mask_blur", 50)
 
     if not image_url:
         return {"error": "image_url is required"}
@@ -180,12 +189,14 @@ def handler(job):
         return {"error": "object_name is required (e.g. 'headphone', 'shoe', 'bottle')"}
 
     seed = random.randint(0, 2**32 - 1) if seed is None else int(seed)
+    mask_dilation = int(mask_dilation)
+    mask_blur = int(mask_blur)
 
     start_time = time.time()
 
     image_filename = download_to_input(image_url, "input_image.png")
 
-    workflow = build_workflow(image_filename, object_name, seed)
+    workflow = build_workflow(image_filename, object_name, seed, mask_dilation, mask_blur)
 
     prompt_id = queue_workflow(workflow)
     print(f"Queued workflow prompt_id={prompt_id}")
@@ -196,7 +207,7 @@ def handler(job):
     duration = round(time.time() - start_time, 2)
     return {
         "images": images,
-        "params": {"object_name": object_name, "seed": seed},
+        "params": {"object_name": object_name, "seed": seed, "mask_dilation": mask_dilation, "mask_blur": mask_blur},
         "duration_seconds": duration,
     }
 
