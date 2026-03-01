@@ -131,6 +131,24 @@ services:
       - postgres
     restart: unless-stopped
 
+  z-turbo:
+    build: ./z-turbo
+    ports:
+      - "5007:5007"
+    env_file:
+      - ./z-turbo/.env
+    environment:
+      - PGHOST=postgres
+      - PGPORT=5432
+      - PGDATABASE=training
+      - PGUSER=training
+      - PGPASSWORD=training
+    volumes:
+      - zturbo-output:/app/generated
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
 volumes:
   postgres-data:
   training-uploads:
@@ -140,3 +158,4 @@ volumes:
   masking-output:
   inpainting-output:
   video-output:
+  zturbo-output:
