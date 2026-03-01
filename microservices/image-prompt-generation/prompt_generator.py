@@ -5,8 +5,6 @@ import requests
 from google import genai
 from google.genai import types
 
-client = genai.Client(api_key="AIzaSyDcauTMoL67Y4lMViDrvvOvVAe4fFmxSDk")
-
 def load_env(path):
     if not os.path.exists(path):
         return
@@ -23,6 +21,8 @@ def load_env(path):
 
 
 load_env(os.path.join(os.path.dirname(__file__), ".env"))
+
+client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
 RUNPOD_URL = "https://api.runpod.ai/v2/1dv4vwaqf3quge/run"
 RUNPOD_TOKEN = os.environ.get("RUNPOD_TOKEN", "")

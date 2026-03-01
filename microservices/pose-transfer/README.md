@@ -1,148 +1,142 @@
-# Pose Transfer Worker — Model Downloads
+# Pose Transfer Serverless Worker
 
-Models are not baked into the Docker image. Run these commands on your RunPod
-network volume (or inside the pod terminal) before the first job.
+ComfyUI-based pose transfer worker running on RunPod Serverless with Qwen Image Edit + InstantX ControlNet.
 
-All paths are under `/comfyui/`.
+## Models on Network Volume
 
----
+| Model | Path on Volume | Source |
+|-------|---------------|--------|
+| Diffusion model | `models/diffusion_models/qwen_image_edit_2509_fp8_e4m3fn.safetensors` | `Comfy-Org/Qwen2.5-VL-ComfyUI` |
+| VAE | `models/vae/qwen_image_vae.safetensors` | `Comfy-Org/Qwen2.5-VL-ComfyUI` |
+| Text encoder | `models/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors` | `Comfy-Org/Qwen2.5-VL-ComfyUI` |
+| Lightning LoRA | `models/loras/Qwen-Image-Lightning-4steps-V1.0.safetensors` | `InstantX/Qwen-Image-Lightning` |
+| ControlNet | `models/controlnet/Qwen-Image-InstantX-ControlNet-Union.safetensors` | `InstantX/Qwen-Image-ControlNet-Union` |
+| DWPose | `models/controlnet/dw-ll_ucoco_384_bs5.torchscript.pt` | `yzd-v/DWPose` |
+| YOLOX-L | `models/controlnet/yolox_l.onnx` | `yzd-v/DWPose` |
 
-## 1. Create directories
+## Setting Up the Network Volume
 
-```bash
-mkdir -p /comfyui/models/diffusion_models
-mkdir -p /comfyui/models/vae
-mkdir -p /comfyui/models/text_encoders
-mkdir -p /comfyui/models/loras
-mkdir -p /comfyui/models/controlnet
-mkdir -p /comfyui/custom_nodes/comfyui_controlnet_aux/ckpts
-```
+1. Create a RunPod **Pod** (not Serverless) with your network volume attached.
+2. SSH in or open the web terminal.
+3. Run the commands below.
+4. Terminate the pod when done — files persist on the volume.
 
----
-
-## 2. Download models
-
-### Qwen Image Edit diffusion model
-Node: UNETLoader (ID 156)
-Path: `models/diffusion_models/qwen_image_edit_2509_fp8_e4m3fn.safetensors`
+### Create directories
 
 ```bash
-wget -O /comfyui/models/diffusion_models/qwen_image_edit_2509_fp8_e4m3fn.safetensors \
-  https://huggingface.co/Comfy-Org/Qwen2.5-VL-ComfyUI/resolve/main/split_files/diffusion_models/qwen_image_edit_2509_fp8_e4m3fn.safetensors
+mkdir -p /workspace/models/diffusion_models
+mkdir -p /workspace/models/vae
+mkdir -p /workspace/models/text_encoders
+mkdir -p /workspace/models/loras
+mkdir -p /workspace/models/controlnet
 ```
 
-> Verify the exact URL on https://huggingface.co/Comfy-Org — search for "qwen_image_edit".
+### Download models
 
----
-
-### Qwen Image VAE
-Node: VAELoader (ID 148)
-Path: `models/vae/qwen_image_vae.safetensors`
+Most repos are gated — set your HuggingFace token first:
 
 ```bash
-wget -O /comfyui/models/vae/qwen_image_vae.safetensors \
-  https://huggingface.co/Comfy-Org/Qwen2.5-VL-ComfyUI/resolve/main/split_files/vae/qwen_image_vae.safetensors
+export HF_TOKEN="hf_xxxxxxxxxxxxxxxxxxxx"
 ```
 
----
-
-### Qwen 2.5 VL text encoder
-Node: CLIPLoader (ID 147)
-Path: `models/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors`
+Diffusion model:
 
 ```bash
-wget -O /comfyui/models/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors \
-  https://huggingface.co/Comfy-Org/Qwen2.5-VL-ComfyUI/resolve/main/split_files/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors
+wget --header="Authorization: Bearer $HF_TOKEN" \
+  "https://huggingface.co/Comfy-Org/Qwen2.5-VL-ComfyUI/resolve/main/split_files/diffusion_models/qwen_image_edit_2509_fp8_e4m3fn.safetensors" \
+  -O /workspace/models/diffusion_models/qwen_image_edit_2509_fp8_e4m3fn.safetensors
 ```
 
----
-
-### Qwen Image Lightning LoRA (4-step fast inference)
-Node: LoraLoaderModelOnly (ID 159)
-Path: `models/loras/Qwen-Image-Lightning-4steps-V1.0.safetensors`
+VAE:
 
 ```bash
-wget -O /comfyui/models/loras/Qwen-Image-Lightning-4steps-V1.0.safetensors \
-  https://huggingface.co/InstantX/Qwen-Image-Lightning/resolve/main/Qwen-Image-Lightning-4steps-V1.0.safetensors
+wget --header="Authorization: Bearer $HF_TOKEN" \
+  "https://huggingface.co/Comfy-Org/Qwen2.5-VL-ComfyUI/resolve/main/split_files/vae/qwen_image_vae.safetensors" \
+  -O /workspace/models/vae/qwen_image_vae.safetensors
 ```
 
-> If this URL is wrong, search https://huggingface.co/InstantX for "Qwen Image Lightning".
-
----
-
-### Qwen InstantX ControlNet Union
-Node: ControlNetLoader (ID 167)
-Path: `models/controlnet/Qwen-Image-InstantX-ControlNet-Union.safetensors`
+Text encoder:
 
 ```bash
-wget -O /comfyui/models/controlnet/Qwen-Image-InstantX-ControlNet-Union.safetensors \
-  https://huggingface.co/InstantX/Qwen-Image-ControlNet-Union/resolve/main/Qwen-Image-InstantX-ControlNet-Union.safetensors
+wget --header="Authorization: Bearer $HF_TOKEN" \
+  "https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors" \
+  -O /workspace/models/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors
 ```
 
-> If this URL is wrong, search https://huggingface.co/InstantX for "Qwen Image ControlNet".
-
----
-
-### DWPose model (for DWPreprocessor)
-Node: DWPreprocessor (ID 165)
-Path: `custom_nodes/comfyui_controlnet_aux/ckpts/dw-ll_ucoco_384_bs5.torchscript.pt`
+Lightning LoRA: 
 
 ```bash
-wget -O /comfyui/custom_nodes/comfyui_controlnet_aux/ckpts/dw-ll_ucoco_384_bs5.torchscript.pt \
-  https://huggingface.co/yzd-v/DWPose/resolve/main/dw-ll_ucoco_384_bs5.torchscript.pt
+wget --header="Authorization: Bearer $HF_TOKEN" \
+  "https://huggingface.co/lightx2v/Qwen-Image-Lightning/resolve/main/Qwen-Image-Lightning-4steps-V1.0.safetensors" \
+  -O /workspace/models/loras/Qwen-Image-Lightning-4steps-V1.0.safetensors
 ```
 
----
-
-### YOLOX-L (for DWPreprocessor — may auto-download on first run)
-Node: DWPreprocessor (ID 165)
-Path: `custom_nodes/comfyui_controlnet_aux/ckpts/yolox_l.onnx`
+ControlNet:
 
 ```bash
-wget -O /comfyui/custom_nodes/comfyui_controlnet_aux/ckpts/yolox_l.onnx \
-  https://huggingface.co/yzd-v/DWPose/resolve/main/yolox_l.onnx
+wget --header="Authorization: Bearer $HF_TOKEN" \
+  "https://huggingface.co/Comfy-Org/Qwen-Image-InstantX-ControlNets/resolve/main/split_files/controlnet/Qwen-Image-InstantX-ControlNet-Union.safetensors" \
+  -O /workspace/models/controlnet/Qwen-Image-InstantX-ControlNet-Union.safetensors
 ```
 
-> `comfyui_controlnet_aux` may download these automatically on first inference.
-> Check the ckpts folder after a test run before downloading manually.
+DWPose + YOLOX (for pose extraction):
 
----
+```bash
+wget --header="Authorization: Bearer $HF_TOKEN" \
+  "https://huggingface.co/yzd-v/DWPose/resolve/main/dw-ll_ucoco_384_bs5.torchscript.pt" \
+  -O /workspace/models/controlnet/dw-ll_ucoco_384_bs5.torchscript.pt
 
-## Handler API
+wget --header="Authorization: Bearer $HF_TOKEN" \
+  "https://huggingface.co/yzd-v/DWPose/resolve/main/yolox_l.onnx" \
+  -O /workspace/models/controlnet/yolox_l.onnx
+```
 
-### Inputs
+### Verify
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `input_image` | string (required) | R2 path or URL — the subject image to be edited |
-| `pose_image` | string (required) | R2 path or URL — the reference image to extract the pose from |
+```bash
+find /workspace/models -type f | sort
+```
 
-Accepted formats for both fields:
-- `r2://bucket-name/path/to/image.png`
-- `https://<account>.r2.cloudflarestorage.com/bucket/key`
-- Bare R2 key (uses `R2_INPUT_BUCKET` env var)
+## Environment Variables
 
-### Output
+Set these on the RunPod Serverless endpoint:
 
-```json
-{
-  "images": [
-    {
-      "r2_path": "r2://<bucket>/generated/<uuid>_ComfyUI_xxxxx_.png",
-      "key": "generated/<uuid>_ComfyUI_xxxxx_.png",
-      "filename": "ComfyUI_xxxxx_.png"
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `R2_ACCOUNT_ID` | Yes | Cloudflare account ID |
+| `R2_ACCESS_KEY_ID` | Yes | R2 API token access key |
+| `R2_SECRET_ACCESS_KEY` | Yes | R2 API token secret key |
+| `R2_BUCKET` | Yes | Default R2 bucket name (no trailing slash) |
+| `R2_INPUT_BUCKET` | No | Override bucket for input images (defaults to `R2_BUCKET`) |
+| `R2_OUTPUT_BUCKET` | No | Override bucket for output images (defaults to `R2_BUCKET`) |
+
+## Building and Deploying
+
+```bash
+docker build -t raj1145/qwen-pose-transfer-worker:latest .
+docker push raj1145/qwen-pose-transfer-worker:latest
+```
+
+Then create a Serverless endpoint on RunPod with:
+- **Container Image**: `raj1145/qwen-pose-transfer-worker:latest`
+- **GPU**: RTX 4090 or better (24 GB+ VRAM)
+- **Network Volume**: the volume with the models above
+
+## API Usage
+
+```bash
+curl -X POST "https://api.runpod.ai/v2/YOUR_ENDPOINT_ID/runsync" \
+  -H "Authorization: Bearer YOUR_RUNPOD_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "input": {
+      "input_image": "r2://bucket/path/to/subject.png",
+      "pose_image": "r2://bucket/path/to/pose_reference.png"
     }
-  ],
-  "duration_seconds": 18.4
-}
+  }'
 ```
 
-### Required environment variables
-
-| Variable | Description |
-|----------|-------------|
-| `R2_ACCOUNT_ID` | Cloudflare account ID |
-| `R2_ACCESS_KEY_ID` | R2 access key |
-| `R2_SECRET_ACCESS_KEY` | R2 secret key |
-| `R2_INPUT_BUCKET` | Bucket to read input images from |
-| `R2_OUTPUT_BUCKET` | Bucket to write generated images to |
+| Field | Required | Description |
+|-------|----------|-------------|
+| `input_image` | Yes | The subject image to be edited. HTTPS URL or `r2://` reference. |
+| `pose_image` | Yes | The reference image to extract the pose from. HTTPS URL or `r2://` reference. |
