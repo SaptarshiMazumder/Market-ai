@@ -25,7 +25,7 @@ load_env(os.path.join(os.path.dirname(__file__), ".env"))
 
 client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
-RUNPOD_URL = "https://api.runpod.ai/v2/vycazppjzv96nv/run"
+RUNPOD_URL = "https://api.runpod.ai/v2/4zt599q013q0cz/run"
 RUNPOD_TOKEN = os.environ.get("RUNPOD_TOKEN", "")
 
 FORMAT_A = "A"
@@ -62,7 +62,7 @@ def _format_instruction(format_choice):
     )
 
 
-def generate_prompt_v2(subject_item, format_choice=None):
+def generate_prompt_v2(subject_item, pose_hint=None, format_choice=None):
     if format_choice not in FORMAT_CHOICES:
         format_choice = random.choice(FORMAT_CHOICES)
 
@@ -93,7 +93,9 @@ def generate_prompt_v2(subject_item, format_choice=None):
         ),
         contents=(
             f"Subject: {subject_item}\n"
-            "Invent a fitting character, wardrobe, pose, and environment.\n"
+            f"Pose hint: {pose_hint if pose_hint else 'None'}\n"
+            "If a pose hint is provided, expand it into a detailed, physical pose description.\n"
+            "Invent a fitting character, wardrobe, and environment.\n"
             "Write the prompt now."
         ),
     )
@@ -123,7 +125,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     subject = input("Enter the subject item: ")
-    prompt = generate_prompt_v2(subject, args.format)
+    pose_hint = input("Enter a pose (optional): ").strip()
+    prompt = generate_prompt_v2(subject, pose_hint if pose_hint else None, args.format)
 
     print("\n--- GENERATED PROMPT ---")
     print(prompt)

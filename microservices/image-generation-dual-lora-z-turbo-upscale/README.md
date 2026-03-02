@@ -1,7 +1,11 @@
-# LoRA + Z-Image-Turbo + Upscale Serverless Worker
+# Dual LoRA + Z-Image-Turbo + Upscale Serverless Worker
 
-Text-to-image generation using a trained LoRA on Z-Image-Turbo followed by a two-stage upscale:
+Text-to-image generation using two chained LoRAs on Z-Image-Turbo followed by a two-stage upscale:
 latent upscale (KSampler) → SeedVR2 AI upscale.
+
+Two LoRAs are applied in sequence:
+1. **Style LoRA** (node 30) — applied first to the base model
+2. **Character LoRA** (node 33) — chained after the style LoRA
 
 The LoRA generation pass uses `res_multistep` sampling (15 steps). The latent upscale refine
 pass switches to `dpmpp_sde` on the **base model** (no LoRA) for cleaner results.
@@ -15,7 +19,8 @@ pass switches to `dpmpp_sde` on the **base model** (no LoRA) for cleaner results
 | VAE (Flux) | `models/vae/ae.safetensors` | ~330 MB | `Comfy-Org/z_image_turbo` |
 | SeedVR2 VAE | `models/SEEDVR2/ema_vae_fp16.safetensors` | ~1 GB | `numz/SeedVR2_comfyUI` *(gated — needs HF token)* |
 | SeedVR2 DiT (GGUF Q4_K_M) | `models/SEEDVR2/seedvr2_ema_3b-Q4_K_M.gguf` | ~2 GB | `cmeka/SeedVR2-GGUF` |
-| Trained LoRA | `models/loras/<your_lora>.safetensors` | varies | your trained model |
+| Style LoRA | `models/loras/<your_style_lora>.safetensors` | varies | your trained model |
+| Character LoRA | `models/loras/<your_character_lora>.safetensors` | varies | your trained model |
 
 ## Setting Up the Network Volume
 
@@ -79,13 +84,18 @@ wget "https://huggingface.co/cmeka/SeedVR2-GGUF/resolve/main/seedvr2_ema_3b-Q4_K
   -O /workspace/models/SEEDVR2/seedvr2_ema_3b-Q4_K_M.gguf
 ```
 
-### Upload your trained LoRA
+### Upload your trained LoRAs
 
-Copy your LoRA file to the volume:
+Copy your LoRA files to the volume:
 
 ```bash
-wget "https://civitai.com/api/download/models/2700908?type=Model&format=SafeTensor" \
+# Style LoRA
+wget "https://civitai.com/api/download/models/<model_id>?type=Model&format=SafeTensor" \
   -O /workspace/models/loras/trainedLora.safetensors
+
+# Character LoRA
+wget "https://civitai.com/api/download/models/<model_id>?type=Model&format=SafeTensor" \
+  -O /workspace/models/loras/trainedLoraCharacter.safetensors
 ```
 
 ### Verify
@@ -111,12 +121,12 @@ Set these on the RunPod Serverless endpoint:
 ## Building and Deploying
 
 ```bash
-docker build -t your-username/lora-z-turbo-upscale-worker:latest .
-docker push your-username/lora-z-turbo-upscale-worker:latest
+docker build -t your-username/dual-lora-z-turbo-upscale-worker:latest .
+docker push your-username/dual-lora-z-turbo-upscale-worker:latest
 ```
 
 Then create a Serverless endpoint on RunPod with:
-- **Container Image**: `your-username/lora-z-turbo-upscale-worker:latest`
+- **Container Image**: `your-username/dual-lora-z-turbo-upscale-worker:latest`
 - **GPU**: RTX 4090 or better (24 GB+ VRAM recommended for SeedVR2)
 - **Network Volume**: the volume with the models above
 
@@ -128,7 +138,8 @@ curl -X POST "https://api.runpod.ai/v2/YOUR_ENDPOINT_ID/runsync" \
   -H "Content-Type: application/json" \
   -d '{
     "input": {
-      "lora_name": "my_trained_model.safetensors",
+      "style_lora_name": "trainedLora.safetensors",
+      "character_lora_name": "trainedLoraCharacter.safetensors",
       "prompt": "a product photograph of a red sneaker on a marble surface",
       "width": 1024,
       "height": 1024,
@@ -140,10 +151,12 @@ curl -X POST "https://api.runpod.ai/v2/YOUR_ENDPOINT_ID/runsync" \
 
 | Field | Required | Default | Description |
 |-------|----------|---------|-------------|
-| `lora_name` | Yes | -- | Filename of the LoRA in `models/loras/` |
+| `style_lora_name` | Yes | -- | Filename of the style LoRA in `models/loras/` |
+| `character_lora_name` | Yes | -- | Filename of the character LoRA in `models/loras/` |
 | `prompt` | Yes | -- | Text description of the image to generate |
 | `negative_prompt` | No | `""` | Text to suppress in the output |
-| `lora_strength` | No | `1.0` | LoRA strength applied to both model and CLIP |
+| `style_lora_strength` | No | `1.0` | Style LoRA strength applied to both model and CLIP |
+| `character_lora_strength` | No | `1.0` | Character LoRA strength applied to both model and CLIP |
 | `width` | No | `1024` | Image width in pixels |
 | `height` | No | `1024` | Image height in pixels |
 | `steps` | No | `15` | Sampling steps for the LoRA generation pass |
