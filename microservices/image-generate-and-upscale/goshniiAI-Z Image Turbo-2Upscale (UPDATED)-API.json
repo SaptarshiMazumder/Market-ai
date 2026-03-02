@@ -1,0 +1,326 @@
+{
+  "1": {
+    "inputs": {
+      "unet_name": "z_image_turbo_bf16.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "2": {
+    "inputs": {
+      "clip_name": "qwen_3_4b.safetensors",
+      "type": "lumina2",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "3": {
+    "inputs": {
+      "vae_name": "ae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "4": {
+    "inputs": {
+      "seed": 60,
+      "steps": 8,
+      "cfg": 1,
+      "sampler_name": "dpmpp_sde",
+      "scheduler": "beta",
+      "denoise": 1,
+      "model": [
+        "1",
+        0
+      ],
+      "positive": [
+        "5",
+        0
+      ],
+      "negative": [
+        "6",
+        0
+      ],
+      "latent_image": [
+        "7",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "5": {
+    "inputs": {
+      "text": "Model: Japanese woman, 24, straight black hair, brown eyes\nEnvironment: Community center main hallway — painted cinder block walls in institutional cream, bulletin boards overloaded with flyers and tear-off tabs, vinyl composite tile in beige, folding table with sign-in sheet beside the gym door, emergency exit sign in green above the far stairwell\nPose: Standing relaxed, weight on one leg, hands at sides\nAperture: f/2.0, Shutter Speed: 1/125, ISO 200, Lens: 50mm, Color Grade: Subtle warmth, pushed blues in shadows.\n\n1.  BIOLOGICAL DETAIL: Hana, a 24-year-old Japanese woman, stands with her weight shifted slightly to her right leg. Her skin exhibits a subtle olive undertone with a light sheen of natural oil, especially visible across her T-zone. Sub-surface scattering softens the light around her cheekbones. Barely visible peach fuzz catches the hard light raking across her jawline. Her fingernails are short, neatly rounded, with a clear gloss finish highlighting the subtle pink of the nail bed and clean cuticles. Her straight black hair, cut just past her shoulders, has individual strands escaping from behind her ears, revealing a glimpse of her scalp and the fine texture of each strand.\n\n2.  WARDROBE ANATOMY: She wears a blouse made of sand-washed silk crepe de chine (16 momme weight, 100 threads per inch) in a muted teal. The fabric drapes softly, with micro-creases visible at the elbow and waist. The blouse has a mandarin collar with a single mother-of-pearl button (12mm diameter, iridescent finish) at the nape of the neck. The seams are French-seamed, with minimal visible stitching. She wears dark-wash, high-waisted jeans made of 12oz Cone Mills denim (3x1 twill weave, indigo-dyed warp, natural weft) with a subtle slub texture. The jeans feature copper rivets (8mm diameter, domed head) at the pocket corners and a brass zipper (YKK #5 gauge) with a leather pull tab. Her black leather belt (full-grain cowhide, 1.25 inches wide, vegetable-tanned) has a brushed silver buckle with a single prong.\n\n3.  ENVIRONMENTAL DEPTH: The community center hallway is lit by overhead fluorescent fixtures (4000K color temperature, CRI 70) casting a cool, even light. The cinder block walls are painted a worn institutional cream, with visible roller texture and hairline cracks. A bulletin board is cluttered with colorful flyers printed on matte paper, secured with pushpins (plastic head, steel shaft). The vinyl composite tile floor (12x12 inch squares, beige with subtle marbling) shows scuff marks and a faint residue of floor wax. A folding table (steel frame, laminate top) holds a sign-in sheet printed on 20lb copy paper, with a black ballpoint pen resting beside it. An emergency exit sign (green lettering, white background, LED illumination) glows above the stairwell at the end of the hall.\n\n4.  SUBJECT INTERACTION: Hana stands relaxed, her hands hanging loosely at her sides, not interacting with any object.\n\n5.  LIGHTING: The primary light source is the overhead fluorescent lighting, casting a cool, even illumination. A supplemental fill light (softbox, 5000K color temperature) is positioned camera-left, subtly softening the shadows on her face. The color grade adds a touch of warmth to her skin tones while pushing the blues in the shadows to emphasize the institutional feel of the environment.\n",
+      "clip": [
+        "2",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "6": {
+    "inputs": {
+      "text": "",
+      "clip": [
+        "2",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "7": {
+    "inputs": {
+      "width": 832,
+      "height": 1536,
+      "batch_size": 1
+    },
+    "class_type": "EmptySD3LatentImage",
+    "_meta": {
+      "title": "EmptySD3LatentImage"
+    }
+  },
+  "8": {
+    "inputs": {
+      "anything": [
+        "3",
+        0
+      ]
+    },
+    "class_type": "Anything Everywhere",
+    "_meta": {
+      "title": "Anything Everywhere"
+    }
+  },
+  "9": {
+    "inputs": {
+      "samples": [
+        "4",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "10": {
+    "inputs": {
+      "images": [
+        "9",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Preview Image"
+    }
+  },
+  "11": {
+    "inputs": {
+      "seed": 60,
+      "steps": 8,
+      "cfg": 1,
+      "sampler_name": "dpmpp_sde",
+      "scheduler": "beta",
+      "denoise": 0.8,
+      "model": [
+        "1",
+        0
+      ],
+      "positive": [
+        "5",
+        0
+      ],
+      "negative": [
+        "6",
+        0
+      ],
+      "latent_image": [
+        "12",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "12": {
+    "inputs": {
+      "upscale_method": "bislerp",
+      "scale_by": 1.25,
+      "samples": [
+        "4",
+        0
+      ]
+    },
+    "class_type": "LatentUpscaleBy",
+    "_meta": {
+      "title": "Upscale Latent By"
+    }
+  },
+  "13": {
+    "inputs": {
+      "samples": [
+        "11",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "14": {
+    "inputs": {
+      "images": [
+        "13",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Preview Image"
+    }
+  },
+  "15": {
+    "inputs": {
+      "model": "ema_vae_fp16.safetensors",
+      "device": "cuda:0",
+      "encode_tiled": true,
+      "encode_tile_size": 1024,
+      "encode_tile_overlap": 128,
+      "decode_tiled": true,
+      "decode_tile_size": 1024,
+      "decode_tile_overlap": 128,
+      "tile_debug": "false",
+      "offload_device": "cpu",
+      "cache_model": false
+    },
+    "class_type": "SeedVR2LoadVAEModel",
+    "_meta": {
+      "title": "SeedVR2 (Down)Load VAE Model"
+    }
+  },
+  "16": {
+    "inputs": {
+      "model": "seedvr2_ema_3b-Q4_K_M.gguf",
+      "device": "cuda:0",
+      "blocks_to_swap": 16,
+      "swap_io_components": false,
+      "offload_device": "cpu",
+      "cache_model": false,
+      "attention_mode": "sdpa"
+    },
+    "class_type": "SeedVR2LoadDiTModel",
+    "_meta": {
+      "title": "SeedVR2 (Down)Load DiT Model"
+    }
+  },
+  "17": {
+    "inputs": {
+      "upscale_method": "lanczos",
+      "scale_by": 0.5,
+      "image": [
+        "13",
+        0
+      ]
+    },
+    "class_type": "ImageScaleBy",
+    "_meta": {
+      "title": "Upscale Image By"
+    }
+  },
+  "18": {
+    "inputs": {
+      "seed": 9527,
+      "resolution": 2560,
+      "max_resolution": 4096,
+      "batch_size": 1,
+      "uniform_batch_size": false,
+      "color_correction": "lab",
+      "temporal_overlap": 0,
+      "prepend_frames": 0,
+      "input_noise_scale": 0,
+      "latent_noise_scale": 0,
+      "offload_device": "cpu",
+      "enable_debug": true,
+      "image": [
+        "17",
+        0
+      ],
+      "dit": [
+        "16",
+        0
+      ],
+      "vae": [
+        "15",
+        0
+      ]
+    },
+    "class_type": "SeedVR2VideoUpscaler",
+    "_meta": {
+      "title": "SeedVR2 Video Upscaler (v2.5.24)"
+    }
+  },
+  "19": {
+    "inputs": {
+      "filename_prefix": "update",
+      "images": [
+        "18",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save Image"
+    }
+  },
+  "20": {
+    "inputs": {
+      "rgthree_comparer": {
+        "images": [
+          {
+            "name": "A",
+            "selected": true,
+            "url": "/api/view?filename=rgthree.compare._temp_zrbts_00017_.png&type=temp&subfolder=&rand=0.19628085327951605"
+          },
+          {
+            "name": "B",
+            "selected": true,
+            "url": "/api/view?filename=rgthree.compare._temp_zrbts_00018_.png&type=temp&subfolder=&rand=0.8094427822848407"
+          }
+        ]
+      },
+      "image_a": [
+        "18",
+        0
+      ],
+      "image_b": [
+        "9",
+        0
+      ]
+    },
+    "class_type": "Image Comparer (rgthree)",
+    "_meta": {
+      "title": "Image Comparer (rgthree)"
+    }
+  }
+}
