@@ -24,7 +24,7 @@ load_env(os.path.join(os.path.dirname(__file__), ".env"))
 
 client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
-RUNPOD_URL = "https://api.runpod.ai/v2/1dv4vwaqf3quge/run"
+RUNPOD_URL = "https://api.runpod.ai/v2/vycazppjzv96nv/run"
 RUNPOD_TOKEN = os.environ.get("RUNPOD_TOKEN", "")
 ENVIRONMENTS_PATH = "environments.json"
 
@@ -187,8 +187,7 @@ def submit_to_runpod(prompt_text):
             "Content-Type": "application/json",
             "Authorization": f"Bearer {RUNPOD_TOKEN}",
         },
-        json={"input": {"prompt": prompt_text, "width": 2048,
-      "height": 2048}},
+        json={"input": {"prompt": prompt_text}},
     )
     response.raise_for_status()
     return response.json()
