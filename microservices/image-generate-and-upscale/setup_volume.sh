@@ -14,8 +14,9 @@ VOLUME=/workspace
 mkdir -p "$VOLUME/models/diffusion_models"
 mkdir -p "$VOLUME/models/text_encoders"
 mkdir -p "$VOLUME/models/vae"
+mkdir -p "$VOLUME/models/SEEDVR2"
 
-# ── Z-Image-Turbo models (same as image-generation-z-turbo worker) ────────────
+# ── Z-Image-Turbo models ──────────────────────────────────────────────────────
 
 BASE="https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files"
 
@@ -31,29 +32,21 @@ echo "=== Downloading VAE: ae.safetensors (~330 MB) ==="
 wget -c "$BASE/vae/ae.safetensors" \
     -O "$VOLUME/models/vae/ae.safetensors"
 
-# ── SeedVR2 models ─────────────────────────────────────────────────────────────
-# These are used by the SeedVR2VideoUpscaler node.
-#
-# NOTE: Verify the exact HuggingFace repo URLs before running — update below
-# if the model has moved or your custom node expects a different folder layout.
-#
-# SeedVR2 VAE  → placed in models/vae/ (resolved via extra_model_paths.yaml)
-# SeedVR2 DiT  → placed in models/diffusion_models/ (resolved via extra_model_paths.yaml)
-#
-# If the SeedVR2 custom node looks in a different folder (e.g. models/SeedVR2/),
-# create a symlink:
-#   ln -s $VOLUME/models/diffusion_models/seedvr2_ema_3b-Q4_K_M.gguf \
-#         $VOLUME/models/SeedVR2/seedvr2_ema_3b-Q4_K_M.gguf
+# ── SeedVR2 models (go in models/SEEDVR2/) ───────────────────────────────────
 
-echo "=== Downloading SeedVR2 VAE: ema_vae_fp16.safetensors ==="
-# TODO: Replace with the correct HuggingFace URL for ema_vae_fp16.safetensors
-wget -c "https://huggingface.co/SeedVR/SeedVR2/resolve/main/ema_vae_fp16.safetensors" \
-    -O "$VOLUME/models/vae/ema_vae_fp16.safetensors"
+echo "=== Downloading SeedVR2 VAE: ema_vae_fp16.safetensors (requires HF token) ==="
+if [ -z "${HF_TOKEN:-}" ]; then
+    echo "ERROR: HF_TOKEN is not set. Export your HuggingFace token first:"
+    echo "  export HF_TOKEN=your_token_here"
+    exit 1
+fi
+wget -c --header="Authorization: Bearer $HF_TOKEN" \
+    "https://huggingface.co/numz/SeedVR2_comfyUI/resolve/main/ema_vae_fp16.safetensors" \
+    -O "$VOLUME/models/SEEDVR2/ema_vae_fp16.safetensors"
 
 echo "=== Downloading SeedVR2 DiT: seedvr2_ema_3b-Q4_K_M.gguf ==="
-# TODO: Replace with the correct HuggingFace URL for the GGUF quantised DiT
-wget -c "https://huggingface.co/city96/SeedVR2-ema-3B-GGUF/resolve/main/seedvr2_ema_3b-Q4_K_M.gguf" \
-    -O "$VOLUME/models/diffusion_models/seedvr2_ema_3b-Q4_K_M.gguf"
+wget -c "https://huggingface.co/cmeka/SeedVR2-GGUF/resolve/main/seedvr2_ema_3b-Q4_K_M.gguf" \
+    -O "$VOLUME/models/SEEDVR2/seedvr2_ema_3b-Q4_K_M.gguf"
 
 echo ""
 echo "=== Done. Network volume model listing ==="

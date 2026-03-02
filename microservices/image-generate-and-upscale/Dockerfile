@@ -4,15 +4,9 @@ FROM runpod/worker-comfyui:5.7.1-base
 RUN pip install --no-cache-dir boto3
 
 # Install SeedVR2 ComfyUI custom node (registry id: seedvr2_videoupscaler)
-# TODO: Replace with the correct repo URL once confirmed
 RUN cd /comfyui/custom_nodes && \
-    git clone https://github.com/kijai/ComfyUI-SeedVR2Wrapper.git && \
-    pip install --no-cache-dir -r /comfyui/custom_nodes/ComfyUI-SeedVR2Wrapper/requirements.txt || true
-
-# Install cg-use-everywhere (provides "Anything Everywhere" node — used for global VAE routing)
-# NOTE: Our API workflow wires VAE explicitly so this is not strictly required,
-# but install it in case the workflow is ever run with a UI snapshot.
-# RUN cd /comfyui/custom_nodes && git clone https://github.com/chrisgoringe/cg-use-everywhere.git
+    git clone https://github.com/numz/ComfyUI-SeedVR2_VideoUpscaler.git seedvr2_videoupscaler && \
+    pip install --no-cache-dir -r /comfyui/custom_nodes/seedvr2_videoupscaler/requirements.txt
 
 # App code
 COPY handler.py /handler.py

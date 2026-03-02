@@ -3,3 +3,4 @@ comfyui:
     diffusion_models: models/diffusion_models/
     text_encoders: models/text_encoders/
     vae: models/vae/
+    SEEDVR2: models/SEEDVR2/
