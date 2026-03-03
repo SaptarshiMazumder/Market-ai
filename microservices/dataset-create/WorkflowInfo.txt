@@ -1,0 +1,19 @@
+WWAA Kontext LoRA Generation Dataset Workflow
+======================================================
+
+Workflow that lets you use Flux1 Kontext Dev to take a single image and create multiple sample images of the same character,
+resulting in a dataset that is having consistent face for LoRA training.
+
+The prompts can be downloaded from my Ko-fi page https://ko-fi.com/s/d70d11696f
+
+Designed for ComfyUI
+Download this and more workflows as https://weirdwonderfulai.art/
+
+
+Installation
+======================================================
+1. Launch ComfyUI (make sure you update to latest)
+2. Drag the provide PNG or JSON file into ComfyUI
+3. Install any missing Custom Node (that show up in red) using ComfyUI Manager. 
+   Quick tutorial on installing ComfyUI Manager https://youtu.be/ltMbJaZoifQ
+

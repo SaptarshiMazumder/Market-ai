@@ -62,7 +62,7 @@ def _format_instruction(format_choice):
     )
 
 
-def generate_prompt_v2(subject_item, pose_hint=None, format_choice=None):
+def generate_prompt_v2(subject_item, scenario_hint=None, format_choice=None):
     if format_choice not in FORMAT_CHOICES:
         format_choice = random.choice(FORMAT_CHOICES)
 
@@ -93,8 +93,8 @@ def generate_prompt_v2(subject_item, pose_hint=None, format_choice=None):
         ),
         contents=(
             f"Subject: {subject_item}\n"
-            f"Pose hint: {pose_hint if pose_hint else 'None'}\n"
-            "If a pose hint is provided, expand it into a detailed, physical pose description.\n"
+            f"Scenario: {scenario_hint if scenario_hint else 'None'}\n"
+            "Follow the scenario closely. Use it to build a detailed, physical pose and action.\n"
             "Invent a fitting character, wardrobe, and environment.\n"
             "Write the prompt now."
         ),
@@ -110,7 +110,10 @@ def submit_to_runpod(prompt_text):
             "Content-Type": "application/json",
             "Authorization": f"Bearer {RUNPOD_TOKEN}",
         },
-        json={"input": {"prompt": prompt_text}},
+        json={"input": {"prompt": prompt_text,  "lora_name": "trainedLoraMidjourney.safetensors",
+    "width": 1024,
+    "height": 1024,
+    "seed": 42}},
     )
     response.raise_for_status()
     return response.json()
@@ -125,8 +128,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     subject = input("Enter the subject item: ")
-    pose_hint = input("Enter a pose (optional): ").strip()
-    prompt = generate_prompt_v2(subject, pose_hint if pose_hint else None, args.format)
+    scenario_hint = input("Enter a scenario (optional): ").strip()
+    prompt = generate_prompt_v2(subject, scenario_hint if scenario_hint else None, args.format)
 
     print("\n--- GENERATED PROMPT ---")
     print(prompt)
