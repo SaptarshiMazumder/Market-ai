@@ -7,7 +7,7 @@ from PIL import Image
 
 
 # Folder containing your .jpg, .png, or .webp images
-IMAGE_FOLDER = "./training_data_2" 
+IMAGE_FOLDER = "./training_datasets/training_data_tenz" 
 
 client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 

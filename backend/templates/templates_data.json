@@ -1,0 +1,35 @@
+[
+    {
+    "id": "1",
+    "name": "Asian",
+    "lora_filename": "asian.safetensors",
+    "keyword": "aisan woman",
+    "preview_image_url": "/api/template-images/uuid.jpg",
+    "url": "https://civitai.com/api/download/models/2715206?type=Model&format=SafeTensor"
+    },
+    {
+    "id": "2",
+    "name": "Midjourney",
+    "lora_filename": "trainedLoraMidjourney.safetensors",
+    "keyword": "",
+    "preview_image_url": "/api/template-images/uuid.jpg",
+    "url": "https://civitai.com/api/download/models/2460437?type=Model&format=SafeTensor"
+    },
+    {
+    "id": "3",
+    "name": "Red Haired Woman",
+    "lora_filename": "GAL123.safetensors",
+    "keyword": "GAL123",
+    "preview_image_url": "/api/template-images/uuid.jpg",
+    "url": "https://v3b.fal.media/files/b/0a90a913/DlNBjBwFT28Jjy-dhdOQ7_pytorch_lora_weights_step_2500.safetensors"
+    },
+    {
+    "id": "4",
+    "name": "Japanese Woman",
+    "lora_filename": "J1A2P.safetensors",
+    "keyword": "J1A2P",
+    "preview_image_url": "/api/template-images/uuid.jpg",
+    "url": "https://v3b.fal.media/files/b/0a90ac26/oyay3NHxwUPGktA54XZuy_pytorch_lora_weights_step_1200.safetensors"
+    }
+
+]

@@ -65,16 +65,9 @@ services:
       - "5003:5003"
     env_file:
       - ./templates/.env
-    environment:
-      - PGHOST=postgres
-      - PGPORT=5432
-      - PGDATABASE=training
-      - PGUSER=training
-      - PGPASSWORD=training
     volumes:
       - templates-images:/app/template_images
-    depends_on:
-      - postgres
+      - templates-data:/app/templates_data.json
     restart: unless-stopped
 
   masking:
@@ -149,13 +142,25 @@ services:
       - postgres
     restart: unless-stopped
 
+  generate:
+    build: ./generate
+    ports:
+      - "5008:5008"
+    env_file:
+      - ./generate/.env
+    volumes:
+      - generate-output:/app/generated
+    restart: unless-stopped
+
 volumes:
   postgres-data:
   training-uploads:
   generation-uploads:
   generation-output:
   templates-images:
+  templates-data:
   masking-output:
   inpainting-output:
   video-output:
   zturbo-output:
+  generate-output:

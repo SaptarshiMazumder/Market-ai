@@ -3,7 +3,20 @@
     "allow": [
       "WebFetch(domain:comfyanonymous.github.io)",
       "Bash(python3 -c \":*)",
-      "WebFetch(domain:www.nextdiffusion.ai)"
+      "WebFetch(domain:www.nextdiffusion.ai)",
+      "Bash(npm create vite@latest frontend -- --template react)",
+      "Bash(npm install)",
+      "Bash(npm install -D tailwindcss@3 postcss autoprefixer)",
+      "Bash(npx tailwindcss init -p)",
+      "Bash(npm run build)",
+      "Bash(\"c:/Users/sapma/OneDrive/Desktop/Projects/Market-ai/backend/templates/models/template.py\":*)",
+      "Bash(\"c:/Users/sapma/OneDrive/Desktop/Projects/Market-ai/backend/templates/routes.py\":*)",
+      "Bash(\"c:/Users/sapma/OneDrive/Desktop/Projects/Market-ai/backend/templates/app.py\":*)",
+      "Bash(\"c:/Users/sapma/OneDrive/Desktop/Projects/Market-ai/backend/templates/requirements.txt\":*)",
+      "Bash(printf 'Flask==3.0.0\\\\nFlask-CORS==4.0.0\\\\npython-dotenv==1.0.0\\\\nwerkzeug==3.0.1\\\\ngunicorn==21.2.0\\\\n')"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\sapma\\OneDrive\\Desktop\\Projects\\Market-ai\\frontend"
     ]
   }
 }

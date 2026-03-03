@@ -1,87 +1,84 @@
+import json
 import os
 import uuid
 from datetime import datetime, timezone
 
-import psycopg2.extras
-from models.database import get_db
-
+DATA_FILE = 'templates_data.json'
 TEMPLATE_IMAGES_FOLDER = 'template_images'
 
 
-def _to_dict(r):
-    return {
-        "id": r["id"],
-        "name": r["name"],
-        "prompt": r["prompt"],
-        "image_url": f"/api/template-images/{r['image_filename']}",
-        "created_at": r["created_at"],
+def _load():
+    if not os.path.exists(DATA_FILE):
+        return []
+    with open(DATA_FILE, 'r') as f:
+        return json.load(f)
+
+
+def _save(templates):
+    with open(DATA_FILE, 'w') as f:
+        json.dump(templates, f, indent=2)
+
+
+def _to_dict(t):
+    # Handle both hand-filled entries (preview_image_url set directly)
+    # and API-created entries (preview_image filename → construct URL)
+    if 'preview_image_url' in t:
+        preview_url = t['preview_image_url']
+    else:
+        preview_url = f"/api/template-images/{t['preview_image']}"
+
+    result = {
+        "id": t["id"],
+        "name": t["name"],
+        "lora_filename": t["lora_filename"],
+        "keyword": t.get("keyword", ""),
+        "preview_image_url": preview_url,
+        "created_at": t.get("created_at", ""),
     }
+    if "url" in t:
+        result["url"] = t["url"]
+    return result
 
 
 def list_templates():
-    conn = get_db()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    cur.execute("SELECT * FROM templates ORDER BY created_at DESC")
-    rows = cur.fetchall()
-    cur.close()
-    conn.close()
-    return [_to_dict(r) for r in rows]
+    return [_to_dict(t) for t in _load()]
 
 
 def get_template(template_id):
-    conn = get_db()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    cur.execute("SELECT * FROM templates WHERE id = %s", (template_id,))
-    row = cur.fetchone()
-    cur.close()
-    conn.close()
-    return _to_dict(row) if row else None
+    for t in _load():
+        if t["id"] == template_id:
+            return _to_dict(t)
+    return None
 
 
-def create_template(name, prompt_text, image_filename):
-    template_id = str(uuid.uuid4())
-    created_at = datetime.now(timezone.utc).isoformat()
-
-    conn = get_db()
-    cur = conn.cursor()
-    cur.execute(
-        "INSERT INTO templates (id, name, prompt, image_filename, created_at) VALUES (%s, %s, %s, %s, %s)",
-        (template_id, name.strip(), prompt_text.strip(), image_filename, created_at),
-    )
-    conn.commit()
-    cur.close()
-    conn.close()
-
-    print(f"[Template] Created: {name} (id={template_id})")
-
-    return {
-        "id": template_id,
+def create_template(name, lora_filename, keyword, preview_image_filename):
+    templates = _load()
+    entry = {
+        "id": str(uuid.uuid4()),
         "name": name.strip(),
-        "prompt": prompt_text.strip(),
-        "image_url": f"/api/template-images/{image_filename}",
-        "created_at": created_at,
+        "lora_filename": lora_filename.strip(),
+        "keyword": keyword.strip(),
+        "preview_image": preview_image_filename,
+        "created_at": datetime.now(timezone.utc).isoformat(),
     }
+    templates.append(entry)
+    _save(templates)
+    print(f"[Template] Created: {name}")
+    return _to_dict(entry)
 
 
 def delete_template(template_id):
-    conn = get_db()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    cur.execute("SELECT image_filename FROM templates WHERE id = %s", (template_id,))
-    row = cur.fetchone()
-
-    if not row:
-        cur.close()
-        conn.close()
+    templates = _load()
+    match = next((t for t in templates if t["id"] == template_id), None)
+    if not match:
         return False
 
-    image_path = os.path.join(TEMPLATE_IMAGES_FOLDER, row["image_filename"])
-    if os.path.exists(image_path):
-        os.remove(image_path)
+    # Only delete file if it was API-created (has preview_image field)
+    if 'preview_image' in match:
+        image_path = os.path.join(TEMPLATE_IMAGES_FOLDER, match["preview_image"])
+        if os.path.exists(image_path):
+            os.remove(image_path)
 
-    cur.execute("DELETE FROM templates WHERE id = %s", (template_id,))
-    conn.commit()
-    cur.close()
-    conn.close()
-
+    _save([t for t in templates if t["id"] != template_id])
     print(f"[Template] Deleted: {template_id}")
     return True

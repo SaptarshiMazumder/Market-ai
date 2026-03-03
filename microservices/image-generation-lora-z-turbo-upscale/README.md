@@ -107,12 +107,17 @@ wget --header="Authorization: Bearer 32935a7da15c304c648fd5d1633002fd" \
 wget --header="Authorization: Bearer 32935a7da15c304c648fd5d1633002fd" \
  "https://v3b.fal.media/files/b/0a90ac26/oyay3NHxwUPGktA54XZuy_pytorch_lora_weights_step_1200.safetensors" \
 -O /workspace/models/loras/J1A2P.safetensors
+
+wget --header="Authorization: Bearer 32935a7da15c304c648fd5d1633002fd" \
+ "https://v3b.fal.media/files/b/0a90b037/Z4AmigAyOOYjkvG4EF0UB_pytorch_lora_weights_step_1200.safetensors" \
+-O /workspace/models/loras/SENTYSON.safetensors
 ```
 keyword=TOKREDGIRL
 keyword=GAL123
 keyword=asian woman
 keyword=fluxtrait
 keyword=J1A2P
+keyword=SENTYSON
 
 ### Verify
 

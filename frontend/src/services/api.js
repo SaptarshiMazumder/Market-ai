@@ -1,76 +1,25 @@
-import axios from 'axios'
-
-const api = axios.create({
-  baseURL: '/api',
-  headers: { 'Content-Type': 'application/json' },
-})
-
-// ── Templates ──────────────────────────────────────────────────────────────
-
-export const listTemplates = async () => {
-  const { data } = await api.get('/templates')
-  return data
+export async function listTemplates() {
+  const res = await fetch('/api/templates')
+  if (!res.ok) throw new Error('Failed to fetch templates')
+  const data = await res.json()
+  return data.templates
 }
 
-export const createTemplate = async (name, prompt, imageFile) => {
-  const formData = new FormData()
-  formData.append('name', name)
-  formData.append('prompt', prompt)
-  formData.append('image', imageFile)
-  const { data } = await api.post('/templates', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
+export async function submitWithTemplate({ subject, scenario, lora_name, keyword, ...params }) {
+  const res = await fetch('/api/generate/image/submit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ subject, scenario, lora_name, keyword, ...params }),
   })
-  return data
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error || 'Failed to submit generation job')
+  }
+  return res.json()
 }
 
-export const deleteTemplate = async (templateId) => {
-  const { data } = await api.delete(`/templates/${templateId}`)
-  return data
+export async function pollGenerate(jobId) {
+  const res = await fetch(`/api/generate/image/status/${jobId}`)
+  if (!res.ok) throw new Error('Failed to poll job status')
+  return res.json()
 }
-
-// ── Z-Turbo Image Generation ───────────────────────────────────────────────
-
-export const generateImage = async ({ prompt, width, height, steps, cfg, denoise, seed }) => {
-  const payload = { prompt, width, height, steps, cfg, denoise }
-  if (seed !== undefined && seed !== null && seed !== '') payload.seed = seed
-  const { data } = await api.post('/z-turbo/generate', payload)
-  return data
-}
-
-export const generateImageAsync = async ({ prompt, width, height, steps, cfg, denoise, seed }) => {
-  const payload = { prompt, width, height, steps, cfg, denoise }
-  if (seed !== undefined && seed !== null && seed !== '') payload.seed = seed
-  const { data } = await api.post('/z-turbo/generate/async', payload)
-  return data
-}
-
-export const getGenerationJob = async (jobId) => {
-  const { data } = await api.get(`/z-turbo/generate/${jobId}`)
-  return data
-}
-
-// ── Training ───────────────────────────────────────────────────────────────
-
-export const listModels = async () => {
-  const { data } = await api.get('/models')
-  return data
-}
-
-export const getTrainingConfig = async () => {
-  const { data } = await api.get('/training-config')
-  return data
-}
-
-export const startTraining = async (formData) => {
-  const { data } = await api.post('/train', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  })
-  return data
-}
-
-export const getTrainingStatus = async (jobId) => {
-  const { data } = await api.get(`/training-status/${jobId}`)
-  return data
-}
-
-export default api

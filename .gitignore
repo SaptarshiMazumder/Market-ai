@@ -21,8 +21,8 @@ backend/uploads/*
 backend/generated/*
 !backend/uploads/.gitkeep
 !backend/generated/.gitkeep
-backend/microservices/dataset-create/captions-create/training_data/*
-backend/microservices/dataset-create/captions-create/training_data_2/*
+backend/microservices/dataset-create/captions-create/training_datasets/*
+
 # Node
 node_modules/
 npm-debug.log*

@@ -4,13 +4,11 @@ import uuid
 from flask import Blueprint, jsonify, request, send_file
 from werkzeug.utils import secure_filename
 
-import re
-
 from models.template import (
-    list_templates as db_list_templates,
-    get_template as db_get_template,
-    create_template as db_create_template,
-    delete_template as db_delete_template,
+    list_templates as db_list,
+    get_template as db_get,
+    create_template as db_create,
+    delete_template as db_delete,
 )
 
 TEMPLATE_IMAGES_FOLDER = 'template_images'
@@ -20,33 +18,30 @@ templates_bp = Blueprint('templates', __name__)
 
 @templates_bp.route('/api/templates', methods=['GET'])
 def list_templates():
-    """List all prompt templates."""
     try:
-        templates = db_list_templates()
-        return jsonify({"templates": templates})
+        return jsonify({"templates": db_list()})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
 @templates_bp.route('/api/templates', methods=['POST'])
 def create_template():
-    """Create a new prompt template with an image and prompt containing trigger_keyword."""
     try:
         name = request.form.get('name')
-        prompt_text = request.form.get('prompt')
-        image_file = request.files.get('image')
+        lora_filename = request.form.get('lora_filename')
+        keyword = request.form.get('keyword')
+        image_file = request.files.get('preview_image')
 
-        if not name or not prompt_text or not image_file:
-            return jsonify({"error": "name, prompt, and image are required"}), 400
+        if not name or not lora_filename or not keyword or not image_file:
+            return jsonify({"error": "name, lora_filename, keyword, and preview_image are required"}), 400
 
         template_id = str(uuid.uuid4())
         ext = os.path.splitext(secure_filename(image_file.filename))[1] or '.png'
         image_filename = f"{template_id}{ext}"
-        image_path = os.path.join(TEMPLATE_IMAGES_FOLDER, image_filename)
-        image_file.save(image_path)
+        image_file.save(os.path.join(TEMPLATE_IMAGES_FOLDER, image_filename))
 
-        result = db_create_template(name, prompt_text, image_filename)
-        return jsonify(result)
+        result = db_create(name, lora_filename, keyword, image_filename)
+        return jsonify(result), 201
 
     except Exception as e:
         print(f"[Template] Error: {e}")
@@ -55,9 +50,8 @@ def create_template():
 
 @templates_bp.route('/api/templates/<template_id>', methods=['GET'])
 def get_template(template_id):
-    """Get a single template by ID."""
     try:
-        template = db_get_template(template_id)
+        template = db_get(template_id)
         if not template:
             return jsonify({"error": "Template not found"}), 404
         return jsonify(template)
@@ -65,40 +59,10 @@ def get_template(template_id):
         return jsonify({"error": str(e)}), 500
 
 
-@templates_bp.route('/api/templates/<template_id>/resolve', methods=['POST'])
-def resolve_template(template_id):
-    """Resolve a template by replacing trigger_keyword with the provided trigger word."""
-    try:
-        template = db_get_template(template_id)
-        if not template:
-            return jsonify({"error": "Template not found"}), 404
-
-        data = request.json or {}
-        trigger_word = data.get("trigger_word")
-        if not trigger_word:
-            return jsonify({"error": "trigger_word is required"}), 400
-
-        resolved_prompt = re.sub(
-            r'trigger_keyword', trigger_word, template["prompt"], flags=re.IGNORECASE
-        )
-
-        return jsonify({
-            "template_id": template["id"],
-            "template_name": template["name"],
-            "original_prompt": template["prompt"],
-            "resolved_prompt": resolved_prompt,
-            "trigger_word": trigger_word,
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
 @templates_bp.route('/api/templates/<template_id>', methods=['DELETE'])
 def delete_template(template_id):
-    """Delete a prompt template."""
     try:
-        success = db_delete_template(template_id)
-        if not success:
+        if not db_delete(template_id):
             return jsonify({"error": "Template not found"}), 404
         return jsonify({"success": True})
     except Exception as e:
@@ -108,7 +72,6 @@ def delete_template(template_id):
 
 @templates_bp.route('/api/template-images/<filename>', methods=['GET'])
 def serve_template_image(filename):
-    """Serve a template preview image."""
     filepath = os.path.join(TEMPLATE_IMAGES_FOLDER, secure_filename(filename))
     if not os.path.exists(filepath):
         return jsonify({"error": "Image not found"}), 404
