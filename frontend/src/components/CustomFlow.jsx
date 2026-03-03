@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { submitNoTemplate, pollGenerate } from '../services/api'
+import { saveGeneratedImage } from '../lib/imageHistory'
 
 const DEFAULT_PARAMS = {
   width: 1024,
@@ -46,6 +47,13 @@ export default function CustomFlow({ onBack }) {
         const job = await pollGenerate(jobId)
         if (job.status === 'completed') {
           clearInterval(pollRef.current)
+          if (job.result?.r2_path) {
+            saveGeneratedImage({
+              r2_path: job.result.r2_path,
+              preview_url: job.result.image_url,
+              subject: subject.trim(),
+            })
+          }
           setGenState({
             status: 'completed',
             jobId,

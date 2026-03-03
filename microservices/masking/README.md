@@ -108,7 +108,7 @@ curl -X POST "https://api.runpod.ai/v2/YOUR_ENDPOINT_ID/runsync" \
   -H "Content-Type: application/json" \
   -d '{
     "input": {
-      "image_url": "r2://bucket/path/to/scene.png",
+      "image_url": "r2://main_image.png",
       "object_name": "headphone",
       "seed": 42
     }

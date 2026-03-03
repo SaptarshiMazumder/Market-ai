@@ -22,43 +22,6 @@ services:
       - postgres
     restart: unless-stopped
 
-  training:
-    build: ./training
-    ports:
-      - "5001:5001"
-    env_file:
-      - ./training/.env
-    environment:
-      - PGHOST=postgres
-      - PGPORT=5432
-      - PGDATABASE=training
-      - PGUSER=training
-      - PGPASSWORD=training
-    volumes:
-      - training-uploads:/app/uploads
-    depends_on:
-      - postgres
-    restart: unless-stopped
-
-  image-generation:
-    build: ./image-generation
-    ports:
-      - "5002:5002"
-    env_file:
-      - ./image-generation/.env
-    environment:
-      - PGHOST=postgres
-      - PGPORT=5432
-      - PGDATABASE=training
-      - PGUSER=training
-      - PGPASSWORD=training
-    volumes:
-      - generation-uploads:/app/uploads
-      - generation-output:/app/generated
-    depends_on:
-      - postgres
-    restart: unless-stopped
-
   templates:
     build: ./templates
     ports:
@@ -70,78 +33,6 @@ services:
       - templates-data:/app/templates_data.json
     restart: unless-stopped
 
-  masking:
-    build: ./masking
-    ports:
-      - "5004:5004"
-    env_file:
-      - ./masking/.env
-    environment:
-      - PGHOST=postgres
-      - PGPORT=5432
-      - PGDATABASE=training
-      - PGUSER=training
-      - PGPASSWORD=training
-    volumes:
-      - masking-output:/app/masks
-    depends_on:
-      - postgres
-    restart: unless-stopped
-
-  inpainting:
-    build: ./inpainting
-    ports:
-      - "5005:5005"
-    env_file:
-      - ./inpainting/.env
-    environment:
-      - PGHOST=postgres
-      - PGPORT=5432
-      - PGDATABASE=training
-      - PGUSER=training
-      - PGPASSWORD=training
-    volumes:
-      - inpainting-output:/app/inpainted
-    depends_on:
-      - postgres
-    restart: unless-stopped
-
-  video-generation:
-    build: ./video-generation
-    ports:
-      - "5006:5006"
-    env_file:
-      - ./video-generation/.env
-    environment:
-      - PGHOST=postgres
-      - PGPORT=5432
-      - PGDATABASE=training
-      - PGUSER=training
-      - PGPASSWORD=training
-    volumes:
-      - video-output:/app/videos
-    depends_on:
-      - postgres
-    restart: unless-stopped
-
-  z-turbo:
-    build: ./z-turbo
-    ports:
-      - "5007:5007"
-    env_file:
-      - ./z-turbo/.env
-    environment:
-      - PGHOST=postgres
-      - PGPORT=5432
-      - PGDATABASE=training
-      - PGUSER=training
-      - PGPASSWORD=training
-    volumes:
-      - zturbo-output:/app/generated
-    depends_on:
-      - postgres
-    restart: unless-stopped
-
   generate:
     build: ./generate
     ports:
@@ -150,17 +41,14 @@ services:
       - ./generate/.env
     volumes:
       - generate-output:/app/generated
+      - generate-masks:/app/masks
+      - generate-inpainted:/app/inpainted
     restart: unless-stopped
 
 volumes:
   postgres-data:
-  training-uploads:
-  generation-uploads:
-  generation-output:
   templates-images:
   templates-data:
-  masking-output:
-  inpainting-output:
-  video-output:
-  zturbo-output:
   generate-output:
+  generate-masks:
+  generate-inpainted:

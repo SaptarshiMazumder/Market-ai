@@ -7,8 +7,11 @@ export default defineConfig({
     proxy: {
       '/api/templates': 'http://localhost:5003',
       '/api/template-images': 'http://localhost:5003',
-      '/api/z-turbo': 'http://localhost:5007',
-      '/api/generate': 'http://localhost:5008',
+'/api/generate': 'http://localhost:5008',
+      '/api/mask': 'http://localhost:5008',
+      '/api/masks': 'http://localhost:5008',
+      '/api/inpaint': 'http://localhost:5008',
+      '/api/inpainted': 'http://localhost:5008',
     },
   },
 })
