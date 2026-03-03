@@ -52,6 +52,7 @@ def build_workflow(
     cfg: float = 1.0,
     denoise: float = 1.0,
     lora_strength: float = 1.0,
+    upscale_lora_strength: float = 0.7,
     negative_prompt: str = "",
     upscale_denoise: float = 0.8,
     scale_by: float = 1.25,
@@ -60,10 +61,15 @@ def build_workflow(
     with open(WORKFLOW_PATH) as f:
         workflow = copy.deepcopy(json.load(f))
 
-    # LoRA — node 30
+    # LoRA generation pass — node 30 (full strength)
     workflow["30"]["inputs"]["lora_name"] = lora_name
     workflow["30"]["inputs"]["strength_model"] = lora_strength
     workflow["30"]["inputs"]["strength_clip"] = lora_strength
+
+    # LoRA upscale refine pass — node 33 (lower strength to avoid waxiness)
+    workflow["33"]["inputs"]["lora_name"] = lora_name
+    workflow["33"]["inputs"]["strength_model"] = upscale_lora_strength
+    workflow["33"]["inputs"]["strength_clip"] = upscale_lora_strength
 
     # Prompts — CLIPTextEncode nodes 28 (positive) and 29 (negative)
     workflow["28"]["inputs"]["text"] = prompt
@@ -162,6 +168,7 @@ def handler(job):
     cfg = job_input.get("cfg", 1.0)
     denoise = job_input.get("denoise", 1.0)
     lora_strength = job_input.get("lora_strength", 1.0)
+    upscale_lora_strength = job_input.get("upscale_lora_strength", 0.7)
     negative_prompt = job_input.get("negative_prompt", "")
     upscale_denoise = job_input.get("upscale_denoise", 0.8)
     scale_by = job_input.get("scale_by", 1.25)
@@ -179,6 +186,7 @@ def handler(job):
     cfg = float(cfg)
     denoise = float(denoise)
     lora_strength = float(lora_strength)
+    upscale_lora_strength = float(upscale_lora_strength)
     upscale_denoise = float(upscale_denoise)
     scale_by = float(scale_by)
     upscale_resolution = int(upscale_resolution)
@@ -187,10 +195,10 @@ def handler(job):
 
     workflow = build_workflow(
         lora_name, prompt, seed, width, height, steps, cfg, denoise,
-        lora_strength, negative_prompt, upscale_denoise, scale_by, upscale_resolution,
+        lora_strength, upscale_lora_strength, negative_prompt, upscale_denoise, scale_by, upscale_resolution,
     )
 
-    print(f"Using LoRA: {lora_name} (strength={lora_strength})")
+    print(f"Using LoRA: {lora_name} (generate strength={lora_strength}, upscale strength={upscale_lora_strength})")
 
     prompt_id = queue_workflow(workflow)
     print(f"Queued workflow prompt_id={prompt_id}")
@@ -211,6 +219,7 @@ def handler(job):
             "cfg": cfg,
             "denoise": denoise,
             "lora_strength": lora_strength,
+            "upscale_lora_strength": upscale_lora_strength,
             "negative_prompt": negative_prompt,
             "upscale_denoise": upscale_denoise,
             "scale_by": scale_by,

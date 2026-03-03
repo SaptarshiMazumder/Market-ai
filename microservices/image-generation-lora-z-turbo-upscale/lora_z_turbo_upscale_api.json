@@ -70,7 +70,7 @@
       "sampler_name": "dpmpp_sde",
       "scheduler": "beta",
       "denoise": 0.8,
-      "model": ["30", 0],
+      "model": ["33", 0],
       "positive": ["28", 0],
       "negative": ["29", 0],
       "latent_image": ["14", 0]
@@ -166,7 +166,7 @@
       "clip": ["22", 0]
     },
     "class_type": "LoraLoader",
-    "_meta": { "title": "Load LoRA" }
+    "_meta": { "title": "Load LoRA (Generate)" }
   },
   "31": {
     "inputs": {
@@ -183,5 +183,16 @@
     },
     "class_type": "KSampler",
     "_meta": { "title": "KSampler (LoRA Generate)" }
+  },
+  "33": {
+    "inputs": {
+      "lora_name": "trainedLora.safetensors",
+      "strength_model": 0.7,
+      "strength_clip": 0.7,
+      "model": ["21", 0],
+      "clip": ["22", 0]
+    },
+    "class_type": "LoraLoader",
+    "_meta": { "title": "Load LoRA (Upscale Refine)" }
   }
 }

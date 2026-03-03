@@ -225,12 +225,12 @@
           {
             "name": "A",
             "selected": true,
-            "url": "/api/view?filename=rgthree.compare._temp_zrbts_00023_.png&type=temp&subfolder=&rand=0.13493347638942899"
+            "url": "/api/view?filename=rgthree.compare._temp_zrbts_00044_.png&type=temp&subfolder=&rand=0.7779767273845395"
           },
           {
             "name": "B",
             "selected": true,
-            "url": "/api/view?filename=rgthree.compare._temp_zrbts_00024_.png&type=temp&subfolder=&rand=0.6563010870539528"
+            "url": "/api/view?filename=rgthree.compare._temp_zrbts_00045_.png&type=temp&subfolder=&rand=0.15134395635305486"
           }
         ]
       },
@@ -257,7 +257,7 @@
       "scheduler": "beta",
       "denoise": 0.8,
       "model": [
-        "21",
+        "33",
         0
       ],
       "positive": [
@@ -395,7 +395,7 @@
   },
   "28": {
     "inputs": {
-      "text": "Model: Woman, 24, straight black hair, brown eyes\nEnvironment: Community center main hallway — painted cinder block walls in institutional cream, bulletin boards overloaded with flyers and tear-off tabs, vinyl composite tile in beige, folding table with sign-in sheet beside the gym door, emergency exit sign in green above the far stairwell\nPose: Standing in a very flirty, confident, teasing pose, weight on one leg with a pronounced hip shift, torso slightly angled toward camera, chin slightly lowered, direct playful eye contact, soft parted lips, one hand lightly adjusting the collar/lapel of her top or jacket as if mid-styling, the other hand resting near the hip/thigh, shoulders relaxed, posture elegant and self-assured\nCamera/Framing: Mid-to-full body framing, eye-level or slightly lower angle for a confident editorial fashion\n\n1.  BIOLOGICAL DETAIL: Daisey, a 24-year-old woman, stands with her weight shifted slightly to her right leg. Her skin exhibits a subtle olive undertone with a light sheen of natural oil, especially visible across her T-zone. Sub-surface scattering softens the light around her cheekbones. Barely visible peach fuzz catches the hard light raking across her jawline. Her fingernails are short, neatly rounded, with a clear gloss finish highlighting the subtle pink of the nail bed and clean cuticles. Her straight black hair, cut just past her shoulders, has individual strands escaping from behind her ears, revealing a glimpse of her scalp and the fine texture of each strand.\n\n2.  WARDROBE ANATOMY: She wears a blouse made of sand-washed silk crepe de chine (16 momme weight, 100 threads per inch) in a muted teal. The fabric drapes softly, with micro-creases visible at the elbow and waist. The blouse has a mandarin collar with a single mother-of-pearl button (12mm diameter, iridescent finish) at the nape of the neck. The seams are French-seamed, with minimal visible stitching. She wears dark-wash, high-waisted jeans made of 12oz Cone Mills denim (3x1 twill weave, indigo-dyed warp, natural weft) with a subtle slub texture. The jeans feature copper rivets (8mm diameter, domed head) at the pocket corners and a brass zipper (YKK #5 gauge) with a leather pull tab. Her black leather belt (full-grain cowhide, 1.25 inches wide, vegetable-tanned) has a brushed silver buckle with a single prong.\n\n3.  ENVIRONMENTAL DEPTH: The community center hallway is lit by overhead fluorescent fixtures (4000K color temperature, CRI 70) casting a cool, even light. The cinder block walls are painted a worn institutional cream, with visible roller texture and hairline cracks. A bulletin board is cluttered with colorful flyers printed on matte paper, secured with pushpins (plastic head, steel shaft). The vinyl composite tile floor (12x12 inch squares, beige with subtle marbling) shows scuff marks and a faint residue of floor wax. A folding table (steel frame, laminate top) holds a sign-in sheet printed on 20lb copy paper, with a black ballpoint pen resting beside it. An emergency exit sign (green lettering, white background, LED illumination) glows above the stairwell at the end of the hall.\n\n4.  SUBJECT INTERACTION: Hana stands relaxed, her hands hanging loosely at her sides, not interacting with any object.\n\n5.  LIGHTING: The primary light source is the overhead fluorescent lighting, casting a cool, even illumination. A supplemental fill light (softbox, 5000K color temperature) is positioned camera-left, subtly softening the shadows on her face. The color grade adds a touch of warmth to her skin tones while pushing the blues in the shadows to emphasize the institutional feel of the environment.",
+      "text": "Cinematic wide shot, TOKREDGIRL in a shearling-lined leather aviator jacket, leaning against a wet, graffitied brick wall in a narrow alleyway, the chrome frames of her sunglasses reflecting the blurred neon glow of a distant noodle shop sign, her gloved hand adjusting the tortoiseshell temple piece, condensation beading on the lenses, a discarded cigarette pack crushed under her Dr. Martens, steam rising from a grated sewer vent nearby, casting a hazy backlight on the scene, dynamic composition.\n\nSoft diffused light filtering through the urban haze, highlighting the subtle texture of her matte lipstick and the worn leather of her jacket, shallow depth of field focusing on the sunglasses and her expressive eyes, motion-blurred figures passing in the background, photorealistic quality, professional cinematography.",
       "clip": [
         "30",
         1
@@ -421,7 +421,7 @@
   },
   "30": {
     "inputs": {
-      "lora_name": "trainedLora2.safetensors",
+      "lora_name": "tokredgirl.safetensors",
       "strength_model": 1,
       "strength_clip": 1,
       "model": [
@@ -440,7 +440,7 @@
   },
   "31": {
     "inputs": {
-      "seed": 1119485687695162,
+      "seed": 874458677315815,
       "steps": 15,
       "cfg": 1,
       "sampler_name": "res_multistep",
@@ -478,6 +478,25 @@
     "class_type": "PreviewImage",
     "_meta": {
       "title": "Preview Image"
+    }
+  },
+  "33": {
+    "inputs": {
+      "lora_name": "tokredgirl.safetensors",
+      "strength_model": 0.7,
+      "strength_clip": 0.7,
+      "model": [
+        "21",
+        0
+      ],
+      "clip": [
+        "22",
+        0
+      ]
+    },
+    "class_type": "LoraLoader",
+    "_meta": {
+      "title": "Load LoRA (Model and CLIP)"
     }
   }
 }
