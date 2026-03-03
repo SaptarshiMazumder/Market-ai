@@ -70,7 +70,7 @@
       "sampler_name": "dpmpp_sde",
       "scheduler": "beta",
       "denoise": 0.8,
-      "model": ["21", 0],
+      "model": ["24", 0],
       "positive": ["28", 0],
       "negative": ["29", 0],
       "latent_image": ["14", 0]
