@@ -92,7 +92,27 @@ wget "https://civitai.com/api/download/models/2460437?type=Model&format=SafeTens
 
 wget "https://storage.googleapis.com/train-1234435345/TOKREDGIRL.safetensors" \
 -O /workspace/models/loras/tokredgirl.safetensors
+
+wget "https://v3b.fal.media/files/b/0a90a913/DlNBjBwFT28Jjy-dhdOQ7_pytorch_lora_weights_step_2500.safetensors" \
+-O /workspace/models/loras/GAL123.safetensors
+
+wget --header="Authorization: Bearer 32935a7da15c304c648fd5d1633002fd" \
+ "https://civitai.com/api/download/models/2715206?type=Model&format=SafeTensor" \
+-O /workspace/models/loras/asian.safetensors
+
+wget --header="Authorization: Bearer 32935a7da15c304c648fd5d1633002fd" \
+ "https://civitai.com/api/download/models/2700908?type=Model&format=SafeTensor" \
+-O /workspace/models/loras/fluxtrait.safetensors
+
+wget --header="Authorization: Bearer 32935a7da15c304c648fd5d1633002fd" \
+ "https://v3b.fal.media/files/b/0a90ac26/oyay3NHxwUPGktA54XZuy_pytorch_lora_weights_step_1200.safetensors" \
+-O /workspace/models/loras/J1A2P.safetensors
 ```
+keyword=TOKREDGIRL
+keyword=GAL123
+keyword=asian woman
+keyword=fluxtrait
+keyword=J1A2P
 
 ### Verify
 
@@ -136,6 +156,8 @@ curl -X POST "https://api.runpod.ai/v2/YOUR_ENDPOINT_ID/runsync" \
     "input": {
       "lora_name": "my_trained_model.safetensors",
       "prompt": "a product photograph of a red sneaker on a marble surface",
+      "lora_strength": 1,
+      "upscale_lora_strength": 0.6,
       "width": 1024,
       "height": 1024,
       "steps": 15,

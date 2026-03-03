@@ -112,10 +112,11 @@ def submit_to_runpod(prompt_text):
             "Content-Type": "application/json",
             "Authorization": f"Bearer {RUNPOD_TOKEN}",
         },
-        json={"input": {"prompt": prompt_text,  "lora_name": "trainedLoraMidjourney.safetensors",
+        json={"input": {"prompt": prompt_text,  "lora_name": "asian.safetensors",
             "width": 1024,
             "height": 1024,
-            "lora_strength": 0.8,
+            "lora_strength": 1,
+            "upscale_lora_strength": 0.6,
             "seed": 42}},
     )
     response.raise_for_status()
