@@ -11,7 +11,7 @@ from services.image_generation.lora_z_turbo_upscale.runpod import submit_job as 
 from services.image_generation.lora_z_turbo_upscale.runpod import get_job_status as lora_get_job_status
 from services.image_generation.z_turbo.runpod import submit_job as z_turbo_submit_job
 from services.image_generation.z_turbo.runpod import get_job_status as z_turbo_get_job_status
-from services.r2 import download_image
+from services.r2 import download_image, list_product_images
 from routes.config import LORA_Z_TURBO_UPSCALE_ENDPOINT_ID, Z_TURBO_ENDPOINT_ID
 
 GENERATED_FOLDER = 'generated'
@@ -196,6 +196,16 @@ def submit_no_template():
 
     except Exception as e:
         print(f"[ImageGen/ZTurbo] Submit error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@image_generation_bp.route('/api/generate/image/list', methods=['GET'])
+def list_images():
+    try:
+        images = list_product_images()
+        return jsonify({"images": images})
+    except Exception as e:
+        print(f"[ImageGen] List error: {e}")
         return jsonify({"error": str(e)}), 500
 
 

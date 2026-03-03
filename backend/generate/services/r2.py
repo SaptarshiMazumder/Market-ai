@@ -47,3 +47,32 @@ def upload_image(file_bytes: bytes, original_filename: str) -> str:
         ContentType=f"image/{ext}",
     )
     return f"r2://{R2_OUTPUT_BUCKET}/{key}"
+
+
+def _list_images(prefix: str, limit: int = 50) -> list:
+    """List images in R2 under a prefix, sorted newest first. Returns [{r2_path, preview_url}]."""
+    client = _client()
+    resp = client.list_objects_v2(Bucket=R2_OUTPUT_BUCKET, Prefix=prefix)
+    objects = resp.get("Contents", [])
+    objects.sort(key=lambda o: o["LastModified"], reverse=True)
+    result = []
+    for obj in objects[:limit]:
+        key = obj["Key"]
+        preview_url = client.generate_presigned_url(
+            "get_object",
+            Params={"Bucket": R2_OUTPUT_BUCKET, "Key": key},
+            ExpiresIn=3600,
+        )
+        result.append({
+            "r2_path": f"r2://{R2_OUTPUT_BUCKET}/{key}",
+            "preview_url": preview_url,
+        })
+    return result
+
+
+def list_masked_images() -> list:
+    return _list_images("masks/")
+
+
+def list_product_images() -> list:
+    return _list_images("products/")
