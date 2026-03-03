@@ -1,4 +1,5 @@
 import os
+import uuid
 import boto3
 from botocore.config import Config
 
@@ -33,3 +34,16 @@ def download_image(r2_path: str) -> bytes:
 
     response = _client().get_object(Bucket=bucket, Key=key)
     return response["Body"].read()
+
+
+def upload_image(file_bytes: bytes, original_filename: str) -> str:
+    """Upload an image to R2 and return its r2:// path."""
+    ext = original_filename.rsplit(".", 1)[-1].lower() if "." in original_filename else "png"
+    key = f"mask-inputs/{uuid.uuid4()}.{ext}"
+    _client().put_object(
+        Bucket=R2_OUTPUT_BUCKET,
+        Key=key,
+        Body=file_bytes,
+        ContentType=f"image/{ext}",
+    )
+    return f"r2://{R2_OUTPUT_BUCKET}/{key}"
