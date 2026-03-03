@@ -86,6 +86,12 @@ Copy your LoRA file to the volume:
 ```bash
 wget "https://civitai.com/api/download/models/2700908?type=Model&format=SafeTensor" \
   -O /workspace/models/loras/trainedLora.safetensors
+
+wget "https://civitai.com/api/download/models/2460437?type=Model&format=SafeTensor" \
+  -O /workspace/models/loras/trainedLoraMidjourney.safetensors
+
+wget "https://storage.googleapis.com/train-1234435345/TOKREDGIRL.safetensors" \
+-O /workspace/models/loras/tokredgirl.safetensors
 ```
 
 ### Verify

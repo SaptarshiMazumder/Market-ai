@@ -62,7 +62,7 @@ def _format_instruction(format_choice):
     )
 
 
-def generate_prompt_v2(subject_item, scenario_hint=None, format_choice=None):
+def generate_prompt_v2(subject_item, scenario_hint=None, trigger_word=None, format_choice=None):
     if format_choice not in FORMAT_CHOICES:
         format_choice = random.choice(FORMAT_CHOICES)
 
@@ -94,8 +94,10 @@ def generate_prompt_v2(subject_item, scenario_hint=None, format_choice=None):
         contents=(
             f"Subject: {subject_item}\n"
             f"Scenario: {scenario_hint if scenario_hint else 'None'}\n"
+            f"Trigger word (character): {trigger_word if trigger_word else 'None'}\n"
             "Follow the scenario closely. Use it to build a detailed, physical pose and action.\n"
-            "Invent a fitting character, wardrobe, and environment.\n"
+            "Use the trigger word as the character reference exactly as given.\n"
+            "Invent a fitting wardrobe and environment around that character.\n"
             "Write the prompt now."
         ),
     )
@@ -111,9 +113,10 @@ def submit_to_runpod(prompt_text):
             "Authorization": f"Bearer {RUNPOD_TOKEN}",
         },
         json={"input": {"prompt": prompt_text,  "lora_name": "trainedLoraMidjourney.safetensors",
-    "width": 1024,
-    "height": 1024,
-    "seed": 42}},
+            "width": 1024,
+            "height": 1024,
+            "lora_strength": 0.8,
+            "seed": 42}},
     )
     response.raise_for_status()
     return response.json()
@@ -129,7 +132,13 @@ if __name__ == "__main__":
 
     subject = input("Enter the subject item: ")
     scenario_hint = input("Enter a scenario (optional): ").strip()
-    prompt = generate_prompt_v2(subject, scenario_hint if scenario_hint else None, args.format)
+    trigger_word = input("Enter a trigger word (optional): ").strip()
+    prompt = generate_prompt_v2(
+        subject,
+        scenario_hint if scenario_hint else None,
+        trigger_word if trigger_word else None,
+        args.format,
+    )
 
     print("\n--- GENERATED PROMPT ---")
     print(prompt)
