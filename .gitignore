@@ -21,6 +21,7 @@ backend/uploads/*
 backend/generated/*
 !backend/uploads/.gitkeep
 !backend/generated/.gitkeep
+backend/generate/generated/*
 backend/microservices/dataset-create/captions-create/training_datasets/*
 
 # Node

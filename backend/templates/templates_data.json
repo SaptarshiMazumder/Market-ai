@@ -30,6 +30,14 @@
     "keyword": "J1A2P",
     "preview_image_url": "/api/template-images/uuid.jpg",
     "url": "https://v3b.fal.media/files/b/0a90ac26/oyay3NHxwUPGktA54XZuy_pytorch_lora_weights_step_1200.safetensors"
+    },
+    {
+    "id": "5",
+    "name": "Young boy",
+    "lora_filename": "SENTYSON.safetensors",
+    "keyword": "SENTYSON",
+    "preview_image_url": "/api/template-images/uuid.jpg",
+    "url": "https://v3b.fal.media/files/b/0a90b037/Z4AmigAyOOYjkvG4EF0UB_pytorch_lora_weights_step_1200.safetensors"
     }
 
 ]

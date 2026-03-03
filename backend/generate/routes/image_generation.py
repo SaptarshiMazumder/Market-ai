@@ -6,10 +6,13 @@ import threading
 from flask import Blueprint, jsonify, request, send_file
 from werkzeug.utils import secure_filename
 
-from services.image_generation.lora_z_turbo_upscale.prompt import generate_prompt
-from services.image_generation.lora_z_turbo_upscale.runpod import submit_job, get_job_status
+from services.image_generation.shared.prompt import generate_prompt
+from services.image_generation.lora_z_turbo_upscale.runpod import submit_job as lora_submit_job
+from services.image_generation.lora_z_turbo_upscale.runpod import get_job_status as lora_get_job_status
+from services.image_generation.z_turbo.runpod import submit_job as z_turbo_submit_job
+from services.image_generation.z_turbo.runpod import get_job_status as z_turbo_get_job_status
 from services.r2 import download_image
-from routes.config import LORA_Z_TURBO_UPSCALE_ENDPOINT_ID
+from routes.config import LORA_Z_TURBO_UPSCALE_ENDPOINT_ID, Z_TURBO_ENDPOINT_ID
 
 GENERATED_FOLDER = 'generated'
 TERMINAL_FAILED = {"FAILED", "CANCELLED", "TIMED_OUT", "CANCELLED_BY_SYSTEM"}
@@ -33,12 +36,12 @@ def _get_job(job_id):
         return dict(_jobs.get(job_id, {}))
 
 
-def _poll_and_finish(job_id, runpod_job_id):
+def _poll_and_finish(job_id, runpod_job_id, endpoint_id, get_status_fn):
     start = time.time()
     timeout = 600
     try:
         while time.time() - start < timeout:
-            data = get_job_status(LORA_Z_TURBO_UPSCALE_ENDPOINT_ID, runpod_job_id)
+            data = get_status_fn(endpoint_id, runpod_job_id)
             status = data.get("status")
             print(f"[ImageGen] {job_id} RunPod status: {status}")
 
@@ -106,7 +109,7 @@ def submit():
         prompt = generate_prompt(subject=subject, keyword=keyword, scenario=scenario)
         print(f"[ImageGen/LoraZTurbo] Prompt: {prompt[:120]}...")
 
-        runpod_job_id = submit_job(
+        runpod_job_id = lora_submit_job(
             endpoint_id=LORA_Z_TURBO_UPSCALE_ENDPOINT_ID,
             lora_name=lora_name,
             prompt=prompt,
@@ -121,7 +124,11 @@ def submit():
         job_id = str(uuid.uuid4())
         _set_job(job_id, status="processing", generated_prompt=prompt, runpod_job_id=runpod_job_id)
 
-        threading.Thread(target=_poll_and_finish, args=(job_id, runpod_job_id), daemon=True).start()
+        threading.Thread(
+            target=_poll_and_finish,
+            args=(job_id, runpod_job_id, LORA_Z_TURBO_UPSCALE_ENDPOINT_ID, lora_get_job_status),
+            daemon=True,
+        ).start()
 
         return jsonify({"job_id": job_id, "status": "processing", "generated_prompt": prompt}), 202
 
@@ -147,6 +154,49 @@ def status(job_id):
         response["error"] = job["error"]
 
     return jsonify(response)
+
+
+@image_generation_bp.route('/api/generate/image/submit/no-template', methods=['POST'])
+def submit_no_template():
+    try:
+        body = request.json or {}
+        subject = body.get("subject", "").strip()
+        scenario = body.get("scenario", "").strip() or None
+        width = int(body.get("width", 1024))
+        height = int(body.get("height", 1024))
+        seed_raw = body.get("seed")
+        seed = int(seed_raw) if seed_raw not in (None, "", "null") else None
+
+        if not subject:
+            return jsonify({"error": "subject is required"}), 400
+
+        print(f"[ImageGen/ZTurbo] Generating prompt for subject='{subject}'")
+        prompt = generate_prompt(subject=subject, keyword="", scenario=scenario)
+        print(f"[ImageGen/ZTurbo] Prompt: {prompt[:120]}...")
+
+        runpod_job_id = z_turbo_submit_job(
+            endpoint_id=Z_TURBO_ENDPOINT_ID,
+            prompt=prompt,
+            width=width,
+            height=height,
+            seed=seed,
+        )
+        print(f"[ImageGen/ZTurbo] RunPod job submitted: {runpod_job_id}")
+
+        job_id = str(uuid.uuid4())
+        _set_job(job_id, status="processing", generated_prompt=prompt, runpod_job_id=runpod_job_id)
+
+        threading.Thread(
+            target=_poll_and_finish,
+            args=(job_id, runpod_job_id, Z_TURBO_ENDPOINT_ID, z_turbo_get_job_status),
+            daemon=True,
+        ).start()
+
+        return jsonify({"job_id": job_id, "status": "processing", "generated_prompt": prompt}), 202
+
+    except Exception as e:
+        print(f"[ImageGen/ZTurbo] Submit error: {e}")
+        return jsonify({"error": str(e)}), 500
 
 
 @image_generation_bp.route('/api/generate/images/<filename>', methods=['GET'])

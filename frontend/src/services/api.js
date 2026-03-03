@@ -18,6 +18,19 @@ export async function submitWithTemplate({ subject, scenario, lora_name, keyword
   return res.json()
 }
 
+export async function submitNoTemplate({ subject, scenario, ...params }) {
+  const res = await fetch('/api/generate/image/submit/no-template', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ subject, scenario, ...params }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error || 'Failed to submit generation job')
+  }
+  return res.json()
+}
+
 export async function pollGenerate(jobId) {
   const res = await fetch(`/api/generate/image/status/${jobId}`)
   if (!res.ok) throw new Error('Failed to poll job status')
