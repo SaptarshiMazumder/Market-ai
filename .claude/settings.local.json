@@ -21,7 +21,8 @@
       "Read(//c/Users/sapma/.claude/projects/c--Users-sapma-OneDrive-Desktop-Projects-Market-ai/71e3096e-a849-4f70-a3d4-e137741c8ee1/tool-results/**)"
     ],
     "additionalDirectories": [
-      "c:\\Users\\sapma\\.claude\\projects\\c--Users-sapma-OneDrive-Desktop-Projects-Market-ai\\memory"
+      "c:\\Users\\sapma\\.claude\\projects\\c--Users-sapma-OneDrive-Desktop-Projects-Market-ai\\memory",
+      "c:\\Users\\sapma\\OneDrive\\Desktop\\Projects\\Market-ai"
     ]
   }
 }

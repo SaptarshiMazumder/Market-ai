@@ -1,17 +1,14 @@
 import os
-import time
 import uuid
 import threading
 
 from flask import Blueprint, jsonify, request, send_file
 from werkzeug.utils import secure_filename
 
-from services.masking.runpod import submit_job, get_job_status
+from nodes.masking import run as masking_run, NodeFailed
 from services.r2 import download_image, upload_image, list_masked_images
-from routes.config import MASKING_ENDPOINT_ID
 
 MASKS_FOLDER = 'masks'
-TERMINAL_FAILED = {"FAILED", "CANCELLED", "TIMED_OUT", "CANCELLED_BY_SYSTEM"}
 
 masking_bp = Blueprint('masking', __name__)
 
@@ -32,50 +29,22 @@ def _get_job(job_id):
         return dict(_jobs.get(job_id, {}))
 
 
-def _poll_and_finish(job_id, runpod_job_id):
-    start = time.time()
-    timeout = 600
+def _run_node(job_id, image_url, object_name):
     try:
-        while time.time() - start < timeout:
-            data = get_job_status(MASKING_ENDPOINT_ID, runpod_job_id)
-            status = data.get("status")
-            print(f"[Mask] {job_id} RunPod status: {status}")
-
-            if status == "COMPLETED":
-                output = data.get("output", {})
-                images = output.get("images", [])
-                if not images:
-                    _set_job(job_id, status="failed", error="No images returned from RunPod")
-                    return
-
-                r2_path = images[0]["r2_path"]
-                image_bytes = download_image(r2_path)
-
-                filename = f"{uuid.uuid4()}.png"
-                with open(os.path.join(MASKS_FOLDER, filename), 'wb') as f:
-                    f.write(image_bytes)
-
-                worker_params = output.get("params", {})
-                duration = round(time.time() - start, 2)
-
-                _set_job(job_id, status="completed", result={
-                    "image_url": f"/api/masks/{filename}",
-                    "r2_path": r2_path,
-                    "params": worker_params,
-                    "duration_seconds": duration,
-                })
-                return
-
-            elif status in TERMINAL_FAILED:
-                error_detail = data.get("error") or data.get("output", {}).get("error") or status.lower()
-                print(f"[Mask] {job_id} RunPod full response: {data}")
-                _set_job(job_id, status="failed", error=f"RunPod {status.lower()}: {error_detail}")
-                return
-
-            time.sleep(5)
-
-        _set_job(job_id, status="failed", error="Timed out waiting for RunPod")
-
+        result = masking_run(generated_r2=image_url, subject=object_name)
+        image_bytes = download_image(result["r2_path"])
+        filename = f"{uuid.uuid4()}.png"
+        with open(os.path.join(MASKS_FOLDER, filename), 'wb') as f:
+            f.write(image_bytes)
+        _set_job(job_id, status="completed", result={
+            "image_url": f"/api/masks/{filename}",
+            "r2_path": result["r2_path"],
+            "score": result["score"],
+            "reason": result["reason"],
+            "attempts_used": result["attempts_used"],
+        })
+    except NodeFailed as e:
+        _set_job(job_id, status="failed", error=str(e))
     except Exception as e:
         print(f"[Mask] {job_id} error: {e}")
         _set_job(job_id, status="failed", error=str(e))
@@ -108,32 +77,20 @@ def submit():
         body = request.json or {}
         image_url = body.get("image_url", "").strip()
         object_name = body.get("object_name", "").strip()
-        seed_raw = body.get("seed")
-        seed = int(seed_raw) if seed_raw not in (None, "", "null") else None
-        mask_dilation_raw = body.get("mask_dilation")
-        mask_dilation = int(mask_dilation_raw) if mask_dilation_raw not in (None, "", "null") else None
-        mask_blur_raw = body.get("mask_blur")
-        mask_blur = int(mask_blur_raw) if mask_blur_raw not in (None, "", "null") else None
 
         if not image_url:
             return jsonify({"error": "image_url is required"}), 400
         if not object_name:
             return jsonify({"error": "object_name is required"}), 400
 
-        runpod_job_id = submit_job(
-            endpoint_id=MASKING_ENDPOINT_ID,
-            image_url=image_url,
-            object_name=object_name,
-            seed=seed,
-            mask_dilation=mask_dilation,
-            mask_blur=mask_blur,
-        )
-        print(f"[Mask] RunPod job submitted: {runpod_job_id}")
-
         job_id = str(uuid.uuid4())
         _set_job(job_id, status="processing", image_url=image_url, object_name=object_name)
 
-        threading.Thread(target=_poll_and_finish, args=(job_id, runpod_job_id), daemon=True).start()
+        threading.Thread(
+            target=_run_node,
+            args=(job_id, image_url, object_name),
+            daemon=True,
+        ).start()
 
         return jsonify({"job_id": job_id, "status": "processing"}), 202
 

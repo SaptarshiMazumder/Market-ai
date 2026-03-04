@@ -99,3 +99,48 @@ export async function pollInpaint(jobId) {
   if (!res.ok) throw new Error('Failed to poll inpaint job status')
   return res.json()
 }
+
+// ── Pipeline (port 5009) ────────────────────────────────────────────────────
+
+export async function uploadProductImage(file) {
+  const form = new FormData()
+  form.append('file', file)
+  const res = await fetch('/api/pipeline/upload', { method: 'POST', body: form })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error || 'Failed to upload product image')
+  }
+  return res.json() // { r2_path, preview_url }
+}
+
+export async function submitPipeline({ subject, mode, product_r2, lora_name, keyword }) {
+  const res = await fetch('/api/pipeline/submit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ subject, mode, product_r2, lora_name, keyword }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error || 'Failed to submit pipeline')
+  }
+  return res.json() // { pipeline_id, status }
+}
+
+export async function getPipelineStatus(pipelineId) {
+  const res = await fetch(`/api/pipeline/status/${pipelineId}`)
+  if (!res.ok) throw new Error('Failed to get pipeline status')
+  return res.json()
+}
+
+export async function listPipelines() {
+  const res = await fetch('/api/pipeline/list')
+  if (!res.ok) throw new Error('Failed to list pipelines')
+  const data = await res.json()
+  return data.pipelines
+}
+
+export async function getPipelineQueues() {
+  const res = await fetch('/api/pipeline/queues')
+  if (!res.ok) throw new Error('Failed to get queue counts')
+  return res.json()
+}

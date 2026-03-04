@@ -12,6 +12,7 @@ export default defineConfig({
       '/api/masks': 'http://localhost:5008',
       '/api/inpaint': 'http://localhost:5008',
       '/api/inpainted': 'http://localhost:5008',
+      '/api/pipeline': 'http://localhost:5009',
     },
   },
 })

@@ -45,6 +45,14 @@ services:
       - generate-inpainted:/app/inpainted
     restart: unless-stopped
 
+  pipeline:
+    build: ./pipeline
+    ports:
+      - "5009:5009"
+    env_file:
+      - ./pipeline/.env
+    restart: unless-stopped
+
 volumes:
   postgres-data:
   templates-images:

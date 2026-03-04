@@ -1,6 +1,10 @@
 import os
+import sys
 from dotenv import load_dotenv
-load_dotenv()  # must run before any module-level env reads (e.g. Gemini client init)
+load_dotenv()
+
+# Make pipeline nodes importable — they own all RunPod/R2/Gemini logic
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'pipeline')))
 
 from flask import Flask
 from flask_cors import CORS
