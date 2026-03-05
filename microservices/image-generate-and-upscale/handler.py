@@ -43,7 +43,6 @@ def wait_for_comfyui(timeout=300):
 
 
 def build_workflow(
-    lora_name: str,
     prompt: str,
     seed: int,
     width: int = 1024,
@@ -52,7 +51,6 @@ def build_workflow(
     cfg: float = 1.0,
     denoise: float = 1.0,
     lora_strength: float = 0.5,
-    style_lora_name: str = "DetailedSkin2.safetensors",
     style_lora_strength: float = 0.5,
     negative_prompt: str = "",
     upscale_denoise: float = 0.6,
@@ -62,15 +60,15 @@ def build_workflow(
     with open(WORKFLOW_PATH) as f:
         workflow = copy.deepcopy(json.load(f))
 
-    # Trained subject LoRA — node 33
-    workflow["33"]["inputs"]["lora_name"] = lora_name
-    workflow["33"]["inputs"]["strength_model"] = lora_strength
-    workflow["33"]["inputs"]["strength_clip"] = lora_strength
-
-    # Style/character LoRA — node 30
-    workflow["30"]["inputs"]["lora_name"] = style_lora_name
+    # LoRA node 30 (hardcoded)
+    workflow["30"]["inputs"]["lora_name"] = "detailedSkin.safetensors"
     workflow["30"]["inputs"]["strength_model"] = style_lora_strength
     workflow["30"]["inputs"]["strength_clip"] = style_lora_strength
+
+    # LoRA node 33 (hardcoded)
+    workflow["33"]["inputs"]["lora_name"] = "detailedSkin2.safetensors"
+    workflow["33"]["inputs"]["strength_model"] = lora_strength
+    workflow["33"]["inputs"]["strength_clip"] = lora_strength
 
     # Positive prompt for LoRA pass — node 28
     workflow["28"]["inputs"]["text"] = prompt
@@ -160,7 +158,6 @@ def upload_images_to_r2(history: dict) -> list:
 def handler(job):
     job_input = job["input"]
 
-    lora_name = job_input.get("lora_name")
     prompt = job_input.get("prompt")
     seed = job_input.get("seed")
     width = job_input.get("width", 1024)
@@ -169,7 +166,6 @@ def handler(job):
     cfg = job_input.get("cfg", 1.0)
     denoise = job_input.get("denoise", 1.0)
     lora_strength = job_input.get("lora_strength", 0.5)
-    style_lora_name = job_input.get("style_lora_name", "DetailedSkin2.safetensors")
     style_lora_strength = job_input.get("style_lora_strength", 0.5)
     negative_prompt = job_input.get("negative_prompt", "")
     upscale_denoise = job_input.get("upscale_denoise", 0.6)
@@ -178,8 +174,6 @@ def handler(job):
 
     if not prompt:
         return {"error": "prompt is required"}
-    if not lora_name:
-        return {"error": "lora_name is required"}
 
     seed = random.randint(0, 2**32 - 1) if seed is None else int(seed)
     width = int(width)
@@ -196,12 +190,12 @@ def handler(job):
     start_time = time.time()
 
     workflow = build_workflow(
-        lora_name, prompt, seed, width, height, steps, cfg, denoise,
-        lora_strength, style_lora_name, style_lora_strength, negative_prompt,
+        prompt, seed, width, height, steps, cfg, denoise,
+        lora_strength, style_lora_strength, negative_prompt,
         upscale_denoise, scale_by, upscale_resolution,
     )
 
-    print(f"Using LoRA: {lora_name} (strength={lora_strength}), style LoRA: {style_lora_name} (strength={style_lora_strength})")
+    print(f"LoRA node30=detailedSkin.safetensors (strength={style_lora_strength}), node33=detailedSkin2.safetensors (strength={lora_strength})")
 
     prompt_id = queue_workflow(workflow)
     print(f"Queued workflow prompt_id={prompt_id}")
@@ -213,7 +207,6 @@ def handler(job):
     return {
         "images": images,
         "params": {
-            "lora_name": lora_name,
             "prompt": prompt,
             "seed": seed,
             "width": width,
@@ -222,7 +215,6 @@ def handler(job):
             "cfg": cfg,
             "denoise": denoise,
             "lora_strength": lora_strength,
-            "style_lora_name": style_lora_name,
             "style_lora_strength": style_lora_strength,
             "negative_prompt": negative_prompt,
             "upscale_denoise": upscale_denoise,

@@ -74,6 +74,13 @@ wget "https://huggingface.co/cmeka/SeedVR2-GGUF/resolve/main/seedvr2_ema_3b-Q4_K
   -O /workspace/models/SEEDVR2/seedvr2_ema_3b-Q4_K_M.gguf
 ```
 
+wget "https://civitai.com/api/download/models/2700908?type=Model&format=SafeTensor" \
+  -O /workspace/models/loras/detailedSkin1.safetensors
+
+wget --header="Authorization: Bearer 32935a7da15c304c648fd5d1633002fd" \
+ "https://civitai.com/api/download/models/2674760?type=Model&format=SafeTensor" \
+-O /workspace/models/loras/detailedSkin2.safetensors
+
 ### Verify
 
 ```bash
