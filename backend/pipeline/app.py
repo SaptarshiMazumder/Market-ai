@@ -75,10 +75,10 @@ def submit():
     subject    = body.get("subject", "").strip()
     mode       = body.get("mode", "").strip()
     product_r2 = body.get("product_r2", "").strip()
-    lora_name      = body.get("lora_name", "").strip() or None
-    keyword        = body.get("keyword", "").strip() or None
-    template_name     = body.get("template_name", "").strip() or None
-    preview_image_url = body.get("preview_image_url", "").strip() or None
+    lora_name         = (body.get("lora_name") or "").strip() or None
+    keyword           = (body.get("keyword") or "").strip() or None
+    template_name     = (body.get("template_name") or "").strip() or None
+    preview_image_url = (body.get("preview_image_url") or "").strip() or None
     run_masking    = bool(body.get("run_masking", True))
     run_inpainting = bool(body.get("run_inpainting", True))
 

@@ -10,7 +10,7 @@ RUN cd /comfyui/custom_nodes && \
 
 # App code
 COPY handler.py /handler.py
-COPY image_generate_and_upscale_api.json /image_generate_and_upscale_api.json
+COPY DualLoraZTurboUpscaleAPI.json /DualLoraZTurboUpscaleAPI.json
 COPY extra_model_paths.yaml /comfyui/extra_model_paths.yaml
 
 WORKDIR /comfyui
