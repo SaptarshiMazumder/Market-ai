@@ -4,3 +4,4 @@ python-dotenv
 requests
 boto3
 google-genai
+google-adk

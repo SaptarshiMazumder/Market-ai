@@ -4,7 +4,7 @@
     "name": "Asian",
     "lora_filename": "asian.safetensors",
     "keyword": "aisan woman",
-    "preview_image_url": "/api/template-images/uuid.jpg",
+    "preview_image_url": "",
     "url": "https://civitai.com/api/download/models/2715206?type=Model&format=SafeTensor"
     },
     {
@@ -12,7 +12,7 @@
     "name": "Midjourney",
     "lora_filename": "trainedLoraMidjourney.safetensors",
     "keyword": "",
-    "preview_image_url": "/api/template-images/uuid.jpg",
+    "preview_image_url": "",
     "url": "https://civitai.com/api/download/models/2460437?type=Model&format=SafeTensor"
     },
     {
@@ -20,7 +20,7 @@
     "name": "Red Haired Woman",
     "lora_filename": "GAL123.safetensors",
     "keyword": "GAL123",
-    "preview_image_url": "/api/template-images/uuid.jpg",
+    "preview_image_url": "C:/Users/sapma/OneDrive/Desktop/Projects/Market-ai/microservices/dataset-create/captions-create/training_datasets/training_data/17.png",
     "url": "https://v3b.fal.media/files/b/0a90a913/DlNBjBwFT28Jjy-dhdOQ7_pytorch_lora_weights_step_2500.safetensors"
     },
     {
@@ -28,15 +28,15 @@
     "name": "Japanese Woman",
     "lora_filename": "J1A2P.safetensors",
     "keyword": "J1A2P",
-    "preview_image_url": "/api/template-images/uuid.jpg",
+    "preview_image_url": "C:/Users/sapma/OneDrive/Desktop/Projects/Market-ai/microservices/dataset-create/captions-create/training_datasets/training_data_2/6.png",
     "url": "https://v3b.fal.media/files/b/0a90ac26/oyay3NHxwUPGktA54XZuy_pytorch_lora_weights_step_1200.safetensors"
     },
     {
     "id": "5",
-    "name": "Young boy",
+    "name": "Young man",
     "lora_filename": "SENTYSON.safetensors",
     "keyword": "SENTYSON",
-    "preview_image_url": "/api/template-images/uuid.jpg",
+    "preview_image_url": "C:/Users/sapma/OneDrive/Desktop/Projects/Market-ai/backend/templates/templatePreviews/SENTYSON.jpg",
     "url": "https://v3b.fal.media/files/b/0a90b037/Z4AmigAyOOYjkvG4EF0UB_pytorch_lora_weights_step_1200.safetensors"
     }
 

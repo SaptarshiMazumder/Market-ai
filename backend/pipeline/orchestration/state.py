@@ -6,12 +6,27 @@ _pipelines: dict = {}
 _lock = threading.Lock()
 
 
+def _initial_agent_steps(mode: str, preview_image_url: str | None) -> list:
+    steps = [
+        {"key": "prompt",  "label": "Write prompt",          "status": "pending"},
+        {"key": "submit",  "label": "Generate image",         "status": "pending"},
+        {"key": "quality", "label": "Review quality",         "status": "pending"},
+    ]
+    if mode == "template" and preview_image_url:
+        steps.append({"key": "character", "label": "Check character match", "status": "pending"})
+    return steps
+
+
 def create_pipeline(
     subject: str,
     mode: str,            # "template" | "no_template"
     product_r2: str,
     lora_name: str | None = None,
     keyword: str | None = None,
+    template_name: str | None = None,
+    preview_image_url: str | None = None,
+    run_masking: bool = True,
+    run_inpainting: bool = True,
 ) -> str:
     pipeline_id = str(uuid.uuid4())
     with _lock:
@@ -23,6 +38,11 @@ def create_pipeline(
             "product_r2": product_r2,
             "lora_name": lora_name,
             "keyword": keyword,
+            "template_name": template_name,
+            "preview_image_url": preview_image_url,
+            "run_masking": run_masking,
+            "run_inpainting": run_inpainting,
+            "agent_steps": _initial_agent_steps(mode, preview_image_url),
             "current_node": "image_gen",   # "image_gen" | "masking" | "inpainting" | "done"
             "image_gen_result": None,
             "masking_result": None,
@@ -38,6 +58,20 @@ def update_pipeline(pipeline_id: str, **fields):
     with _lock:
         if pipeline_id in _pipelines:
             _pipelines[pipeline_id].update(fields)
+
+
+def update_agent_step(pipeline_id: str, key: str, status: str, label: str | None = None):
+    """Update a single step's status (and optionally label) inside agent_steps."""
+    with _lock:
+        p = _pipelines.get(pipeline_id)
+        if not p:
+            return
+        for step in p.get("agent_steps", []):
+            if step["key"] == key:
+                step["status"] = status
+                if label is not None:
+                    step["label"] = label
+                break
 
 
 def get_pipeline(pipeline_id: str) -> dict | None:

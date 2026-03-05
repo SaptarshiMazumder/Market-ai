@@ -1,7 +1,7 @@
 import threading
 import time
 
-from orchestration.state import update_pipeline, get_pipeline
+from orchestration.state import update_pipeline, get_pipeline, update_agent_step
 from nodes import image_gen, masking, inpainting
 from nodes.image_gen import NodeFailed as ImageGenFailed
 from nodes.masking import NodeFailed as MaskingFailed
@@ -26,7 +26,16 @@ def run_pipeline(pipeline_id: str):
             mode=p["mode"],
             lora_name=p.get("lora_name"),
             keyword=p.get("keyword"),
+            template_name=p.get("template_name"),
+            preview_image_url=p.get("preview_image_url"),
+            on_prompt=lambda prompt: update_pipeline(pipeline_id, current_prompt=prompt),
+            on_step=lambda key, status, label=None: update_agent_step(pipeline_id, key, status, label),
         )
+        if not p.get("run_masking", True):
+            update_pipeline(pipeline_id, image_gen_result=result1, current_node="done", status="completed", completed_at=time.time())
+            print(f"[Orchestrator] Pipeline {pipeline_id} stopped after image_gen (run_masking=False).")
+            return
+
         update_pipeline(pipeline_id, image_gen_result=result1, current_node="masking")
 
         # ── Node 2: Masking ────────────────────────────────────────────────────
@@ -34,6 +43,12 @@ def run_pipeline(pipeline_id: str):
             generated_r2=result1["r2_path"],
             subject=p["subject"],
         )
+
+        if not p.get("run_inpainting", True):
+            update_pipeline(pipeline_id, masking_result=result2, current_node="done", status="completed", completed_at=time.time())
+            print(f"[Orchestrator] Pipeline {pipeline_id} stopped after masking (run_inpainting=False).")
+            return
+
         update_pipeline(pipeline_id, masking_result=result2, current_node="inpainting")
 
         # ── Node 3: Inpainting ─────────────────────────────────────────────────

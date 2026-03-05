@@ -20,8 +20,10 @@ export default function PipelineTab() {
   const [productR2, setProductR2]     = useState(null)
   const [uploading, setUploading]     = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState(null)
-  const [submitting, setSubmitting]   = useState(false)
-  const [submitError, setSubmitError] = useState(null)
+  const [runMasking, setRunMasking]       = useState(true)
+  const [runInpainting, setRunInpainting] = useState(true)
+  const [submitting, setSubmitting]       = useState(false)
+  const [submitError, setSubmitError]     = useState(null)
   const pollRef = useRef(null)
 
   // ── Polling ──────────────────────────────────────────────────────────────
@@ -70,8 +72,12 @@ export default function PipelineTab() {
         subject: subject.trim(),
         mode,
         product_r2: productR2,
-        lora_name: selectedTemplate?.lora_filename ?? null,
-        keyword:   selectedTemplate?.keyword ?? null,
+        lora_name:         selectedTemplate?.lora_filename ?? null,
+        keyword:           selectedTemplate?.keyword ?? null,
+        template_name:     selectedTemplate?.name ?? null,
+        preview_image_url: selectedTemplate?.preview_image_url ?? null,
+        run_masking:    runMasking,
+        run_inpainting: runInpainting,
       })
       await refresh()
     } catch (err) {
@@ -165,6 +171,29 @@ export default function PipelineTab() {
           </div>
         )}
 
+        {/* Pipeline step toggles */}
+        <div>
+          <p className="text-xs font-medium text-zinc-400 mb-2">Run steps</p>
+          <div className="flex flex-col gap-2">
+            {[
+              { label: 'Masking',    value: runMasking,    set: setRunMasking },
+              { label: 'Inpainting', value: runInpainting, set: setRunInpainting,
+                disabled: !runMasking },
+            ].map(({ label, value, set, disabled }) => (
+              <label key={label} className={`flex items-center gap-2.5 cursor-pointer select-none ${disabled ? 'opacity-40 pointer-events-none' : ''}`}>
+                <button
+                  type="button"
+                  onClick={() => set(v => !v)}
+                  className={`w-9 h-5 rounded-full transition-colors relative ${value ? 'bg-violet-600' : 'bg-zinc-700'}`}
+                >
+                  <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${value ? 'translate-x-4' : 'translate-x-0'}`} />
+                </button>
+                <span className="text-sm text-zinc-300">{label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
         {submitError && (
           <p className="text-xs text-red-400 bg-red-950/30 rounded-lg p-3 border border-red-900/50">
             {submitError}
@@ -252,6 +281,18 @@ function PipelineCard({ pipeline: p }) {
         })}
       </div>
 
+      {/* Agent checklist */}
+      {p.agent_steps?.length > 0 && (
+        <AgentChecklist steps={p.agent_steps} />
+      )}
+
+      {/* Generated prompt */}
+      {(p.current_prompt || p.image_gen_result?.prompt) && (
+        <p className="text-xs text-zinc-500 italic mb-3 leading-relaxed">
+          {p.current_prompt || p.image_gen_result.prompt}
+        </p>
+      )}
+
       {/* Thumbnails */}
       {(p.image_gen_result || p.masking_result || p.inpainting_result) && (
         <div className="flex gap-2 mb-3">
@@ -270,6 +311,31 @@ function PipelineCard({ pipeline: p }) {
       {p.inpainting_result && (
         <FinalResult result={p.inpainting_result} />
       )}
+    </div>
+  )
+}
+
+function AgentChecklist({ steps }) {
+  const icon = {
+    pending:  { glyph: '○', cls: 'text-zinc-600' },
+    running:  { glyph: '⏳', cls: 'text-violet-400 animate-pulse' },
+    done:     { glyph: '✓', cls: 'text-green-400' },
+    failed:   { glyph: '✗', cls: 'text-red-400' },
+  }
+
+  return (
+    <div className="mb-3 pl-1 border-l-2 border-zinc-800 space-y-1">
+      {steps.map(step => {
+        const { glyph, cls } = icon[step.status] ?? icon.pending
+        return (
+          <div key={step.key} className="flex items-center gap-2">
+            <span className={`text-xs font-mono w-4 text-center ${cls}`}>{glyph}</span>
+            <span className={`text-xs ${step.status === 'running' ? 'text-zinc-200' : step.status === 'done' ? 'text-zinc-400' : step.status === 'failed' ? 'text-red-400' : 'text-zinc-600'}`}>
+              {step.label}
+            </span>
+          </div>
+        )
+      })}
     </div>
   )
 }

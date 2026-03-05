@@ -113,11 +113,11 @@ export async function uploadProductImage(file) {
   return res.json() // { r2_path, preview_url }
 }
 
-export async function submitPipeline({ subject, mode, product_r2, lora_name, keyword }) {
+export async function submitPipeline({ subject, mode, product_r2, lora_name, keyword, template_name, preview_image_url, run_masking, run_inpainting }) {
   const res = await fetch('/api/pipeline/submit', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ subject, mode, product_r2, lora_name, keyword }),
+    body: JSON.stringify({ subject, mode, product_r2, lora_name, keyword, template_name, preview_image_url, run_masking, run_inpainting }),
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))

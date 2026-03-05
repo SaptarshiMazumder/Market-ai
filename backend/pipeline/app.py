@@ -75,8 +75,12 @@ def submit():
     subject    = body.get("subject", "").strip()
     mode       = body.get("mode", "").strip()
     product_r2 = body.get("product_r2", "").strip()
-    lora_name  = body.get("lora_name", "").strip() or None
-    keyword    = body.get("keyword", "").strip() or None
+    lora_name      = body.get("lora_name", "").strip() or None
+    keyword        = body.get("keyword", "").strip() or None
+    template_name     = body.get("template_name", "").strip() or None
+    preview_image_url = body.get("preview_image_url", "").strip() or None
+    run_masking    = bool(body.get("run_masking", True))
+    run_inpainting = bool(body.get("run_inpainting", True))
 
     if not subject:
         return jsonify({"error": "subject is required"}), 400
@@ -93,6 +97,10 @@ def submit():
         product_r2=product_r2,
         lora_name=lora_name,
         keyword=keyword,
+        template_name=template_name,
+        preview_image_url=preview_image_url,
+        run_masking=run_masking,
+        run_inpainting=run_inpainting,
     )
     orchestrator.start(pipeline_id)
     print(f"[Pipeline] Started {pipeline_id} subject='{subject}' mode={mode}")
