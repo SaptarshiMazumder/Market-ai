@@ -62,7 +62,7 @@ After generating the mask, review by looking at BOTH the mask image AND the prod
 3. Is the mask contiguous — not fragmented into many disconnected pieces?
 4. Is the dilation reasonable — enough inpainting margin without bleeding far into background?
 
-Pass threshold: score ≥ 6.5 out of 10.
+Pass threshold: score ≥ 5.0 out of 10. Only retry if the mask fundamentally failed to cover the subject.
 
 ## Retry Strategy
 - Fragmented or missed subject: change seed (Florence2 is non-deterministic)
@@ -136,7 +136,7 @@ def create_and_run(
             r2_path: The r2_path returned by submit_mask.
         Returns:
             {"score": float, "reason": str, "passed": bool}
-            Score is 0–10; passed means score ≥ 6.5.
+            Score is 0–10; passed means score ≥ 5.0.
         """
         mask_bytes = _mask_cache.get(r2_path)
         if not mask_bytes:

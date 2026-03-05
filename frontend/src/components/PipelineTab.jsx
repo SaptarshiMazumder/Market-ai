@@ -151,7 +151,7 @@ export default function PipelineTab() {
                   name="mode"
                   value={val}
                   checked={mode === val}
-                  onChange={() => setMode(val)}
+                  onChange={() => { setMode(val); if (val === 'no_template') setSelectedTemplate(null); }}
                   className="accent-violet-500"
                 />
                 <span className="text-sm text-zinc-300">{label}</span>

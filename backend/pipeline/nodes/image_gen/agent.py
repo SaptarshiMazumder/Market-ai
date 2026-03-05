@@ -49,8 +49,6 @@ Write prompts in editorial photography style, 120–220 words. Choose one of thr
 - Dynamic, energetic framing with motion verbs; two-part structure describing action then environment
 
 Every prompt must include ALL of:
-- The keyword (trigger word) as the ONLY character identifier — never describe age, face, \
-  hair, height, weight, skin tone, or any physical features
 - The subject item clearly worn, held, or used by the character
 - Specific camera/lens language (angle, focal length, depth of field)
 - Lighting specifics (type, direction, quality, colour temperature)
@@ -58,9 +56,36 @@ Every prompt must include ALL of:
 - Concrete textures and materials (no vague adjectives like "nice" or "beautiful")
 - Environment details that contextualise the scene
 
+**Character description — depends on mode (see task message):**
+- **Template mode**: use the keyword as the ONLY character identifier. Never describe age, face, \
+  hair, height, weight, skin tone, or any physical features — the LoRA encodes all of that.
+- **No-template mode**: there is no LoRA and no keyword. Describe a complete, specific character — \
+  gender, approximate age, ethnicity, hair, face, build, style — so the model can render a convincing \
+  real person. Be specific and concrete; vague descriptors produce generic-looking results.
+
 **Never include food or edible props in the scene unless the subject itself is a food product. Beverages are allowed.**
 
-## Review Criteria
+## Accessory-Specific Framing Rules
+For accessories (watches, bracelets, rings, necklaces, lockets, earrings, ties, belts, caps, hats, \
+sunglasses, bags, backpacks, wallets, scarves, gloves, socks, etc.), the shot framing is critical — \
+a wide environmental shot will bury the accessory and make it invisible. Follow these rules:
+
+- **Wrist accessories** (watch, bracelet): close-up or medium shot focused on the wrist/forearm; \
+  character's hand in a natural resting or gesturing pose so the accessory fills a significant \
+  portion of the frame
+- **Neck/chest accessories** (necklace, locket, tie, scarf): portrait or upper-body shot; \
+  accessory centred in frame, not hidden under clothing
+- **Head accessories** (cap, hat, sunglasses): portrait or bust shot looking at or slightly away \
+  from camera; hat/glasses prominent and fully visible
+- **Waist accessories** (belt): mid-body framing showing the waist and the buckle clearly
+- **Carried accessories** (bag, backpack, wallet, purse): character holding or carrying it at \
+  a natural angle with the bag occupying foreground; use a medium or three-quarter shot so the \
+  bag's design and shape are legible
+- **Small accessories** (ring, earring, pin): macro or extreme close-up; fill the frame with \
+  the accessory and the body part wearing it
+
+**Never choose a wide, full-body, or environment-dominant shot for an accessory — \
+the accessory must be immediately visible and identifiable without the viewer searching for it.**
 - Quality threshold: score ≥ 7.0 (photorealistic, no AI artefacts, no body deformities, \
   subject clearly visible and correctly used/worn)
 - Character match (template mode): generated character must be recognisably the same \
@@ -277,8 +302,8 @@ def create_and_run(
         f"Character keyword: '{keyword}'\n"
         f"Template preview: {'available' if preview_image_url else 'not available — skip character check'}\n"
     ) if mode == "template" else (
-        f"Mode: custom prompt (no LoRA)\n"
-        f"Character keyword: '{keyword or 'none'}'\n"
+        f"Mode: no-template (no LoRA, no keyword)\n"
+        f"Describe the character in full detail in your prompt (gender, age, ethnicity, hair, face, build, style).\n"
     )
 
     task_message = (

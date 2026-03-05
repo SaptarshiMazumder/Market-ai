@@ -9,7 +9,7 @@ import uuid
 import boto3
 from botocore.config import Config
 
-WORKFLOW_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "image_z_image_turbo_api.json")
+WORKFLOW_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "DualLoraZTurboUpscaleAPI.json")
 
 COMFYUI_URL = "http://127.0.0.1:8188"
 
