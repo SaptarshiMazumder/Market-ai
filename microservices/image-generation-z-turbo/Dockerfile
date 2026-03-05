@@ -5,7 +5,7 @@ RUN pip install --no-cache-dir boto3
 
 # App code
 COPY handler.py /handler.py
-COPY DualLoraZTurboUpscaleAPI.json /DualLoraZTurboUpscaleAPI.json
+COPY DualLoraZTurboAPI.json /DualLoraZTurboAPI.json
 COPY extra_model_paths.yaml /comfyui/extra_model_paths.yaml
 
 WORKDIR /comfyui
