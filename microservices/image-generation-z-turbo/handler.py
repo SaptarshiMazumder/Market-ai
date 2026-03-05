@@ -42,23 +42,63 @@ def wait_for_comfyui(timeout=300):
     raise TimeoutError("ComfyUI failed to start within the timeout period")
 
 
-def build_workflow(prompt: str, seed: int, width: int = 1024, height: int = 1024,
-                   steps: int = 8, cfg: float = 1.0, denoise: float = 1.0) -> dict:
+def build_workflow(
+    lora_name: str,
+    prompt: str,
+    seed: int,
+    width: int = 1024,
+    height: int = 1024,
+    steps: int = 15,
+    cfg: float = 1.0,
+    denoise: float = 1.0,
+    lora_strength: float = 0.5,
+    style_lora_name: str = "DetailedSkin2.safetensors",
+    style_lora_strength: float = 0.5,
+    negative_prompt: str = "",
+    upscale_denoise: float = 0.6,
+    scale_by: float = 1.25,
+    upscale_resolution: int = 2560,
+) -> dict:
     with open(WORKFLOW_PATH) as f:
         workflow = copy.deepcopy(json.load(f))
 
-    # Prompt — CLIPTextEncode node 27
-    workflow["27"]["inputs"]["text"] = prompt
+    # Trained subject LoRA — node 33
+    workflow["33"]["inputs"]["lora_name"] = lora_name
+    workflow["33"]["inputs"]["strength_model"] = lora_strength
+    workflow["33"]["inputs"]["strength_clip"] = lora_strength
 
-    # KSampler node 3
-    workflow["3"]["inputs"]["seed"] = seed
-    workflow["3"]["inputs"]["steps"] = steps
-    workflow["3"]["inputs"]["cfg"] = cfg
-    workflow["3"]["inputs"]["denoise"] = denoise
+    # Style/character LoRA — node 30
+    workflow["30"]["inputs"]["lora_name"] = style_lora_name
+    workflow["30"]["inputs"]["strength_model"] = style_lora_strength
+    workflow["30"]["inputs"]["strength_clip"] = style_lora_strength
 
-    # Image dimensions — EmptySD3LatentImage node 13
-    workflow["13"]["inputs"]["width"] = width
-    workflow["13"]["inputs"]["height"] = height
+    # Positive prompt for LoRA pass — node 28
+    workflow["28"]["inputs"]["text"] = prompt
+
+    # Negative prompt for LoRA pass — node 29
+    workflow["29"]["inputs"]["text"] = negative_prompt
+
+    # Image dimensions — EmptySD3LatentImage node 23
+    workflow["23"]["inputs"]["width"] = width
+    workflow["23"]["inputs"]["height"] = height
+
+    # Main LoRA generation KSampler — node 31
+    workflow["31"]["inputs"]["seed"] = seed
+    workflow["31"]["inputs"]["steps"] = steps
+    workflow["31"]["inputs"]["cfg"] = cfg
+    workflow["31"]["inputs"]["denoise"] = denoise
+
+    # Upscale refine KSampler — node 18
+    workflow["18"]["inputs"]["seed"] = seed
+    workflow["18"]["inputs"]["cfg"] = cfg
+    workflow["18"]["inputs"]["denoise"] = upscale_denoise
+
+    # LatentUpscaleBy — node 14
+    workflow["14"]["inputs"]["scale_by"] = scale_by
+
+    # SeedVR2 upscaler — node 20
+    workflow["20"]["inputs"]["seed"] = seed
+    workflow["20"]["inputs"]["resolution"] = upscale_resolution
 
     return workflow
 
@@ -69,9 +109,8 @@ def queue_workflow(workflow: dict) -> str:
     return r.json()["prompt_id"]
 
 
-def wait_for_job(prompt_id: str, timeout: int = 300) -> dict:
-    start = time.time()
-    while time.time() - start < timeout:
+def wait_for_job(prompt_id: str) -> dict:
+    while True:
         r = requests.get(f"{COMFYUI_URL}/history/{prompt_id}", timeout=10)
         history = r.json()
         if prompt_id in history:
@@ -82,15 +121,14 @@ def wait_for_job(prompt_id: str, timeout: int = 300) -> dict:
                 raise RuntimeError(f"ComfyUI job failed: {messages}")
             return job
         time.sleep(2)
-    raise TimeoutError(f"Job {prompt_id} timed out after {timeout}s")
 
 
 def upload_images_to_r2(history: dict) -> list:
-    """Fetch generated images from ComfyUI's SaveImage node and upload to R2."""
+    """Fetch final upscaled image from SaveImage node 19 and upload to R2."""
     client = _r2_client()
     results = []
 
-    save_node_output = history["outputs"].get("9", {})
+    save_node_output = history["outputs"].get("19", {})
     for img in save_node_output.get("images", []):
         r = requests.get(
             f"{COMFYUI_URL}/view",
@@ -99,7 +137,7 @@ def upload_images_to_r2(history: dict) -> list:
                 "subfolder": img.get("subfolder", ""),
                 "type": img.get("type", "output"),
             },
-            timeout=60,
+            timeout=120,
         )
         r.raise_for_status()
 
@@ -122,16 +160,26 @@ def upload_images_to_r2(history: dict) -> list:
 def handler(job):
     job_input = job["input"]
 
+    lora_name = job_input.get("lora_name")
     prompt = job_input.get("prompt")
     seed = job_input.get("seed")
     width = job_input.get("width", 1024)
     height = job_input.get("height", 1024)
-    steps = job_input.get("steps", 8)
+    steps = job_input.get("steps", 15)
     cfg = job_input.get("cfg", 1.0)
     denoise = job_input.get("denoise", 1.0)
+    lora_strength = job_input.get("lora_strength", 0.5)
+    style_lora_name = job_input.get("style_lora_name", "DetailedSkin2.safetensors")
+    style_lora_strength = job_input.get("style_lora_strength", 0.5)
+    negative_prompt = job_input.get("negative_prompt", "")
+    upscale_denoise = job_input.get("upscale_denoise", 0.6)
+    scale_by = job_input.get("scale_by", 1.25)
+    upscale_resolution = job_input.get("upscale_resolution", 2560)
 
     if not prompt:
         return {"error": "prompt is required"}
+    if not lora_name:
+        return {"error": "lora_name is required"}
 
     seed = random.randint(0, 2**32 - 1) if seed is None else int(seed)
     width = int(width)
@@ -139,10 +187,21 @@ def handler(job):
     steps = int(steps)
     cfg = float(cfg)
     denoise = float(denoise)
+    lora_strength = float(lora_strength)
+    style_lora_strength = float(style_lora_strength)
+    upscale_denoise = float(upscale_denoise)
+    scale_by = float(scale_by)
+    upscale_resolution = int(upscale_resolution)
 
     start_time = time.time()
 
-    workflow = build_workflow(prompt, seed, width, height, steps, cfg, denoise)
+    workflow = build_workflow(
+        lora_name, prompt, seed, width, height, steps, cfg, denoise,
+        lora_strength, style_lora_name, style_lora_strength, negative_prompt,
+        upscale_denoise, scale_by, upscale_resolution,
+    )
+
+    print(f"Using LoRA: {lora_name} (strength={lora_strength}), style LoRA: {style_lora_name} (strength={style_lora_strength})")
 
     prompt_id = queue_workflow(workflow)
     print(f"Queued workflow prompt_id={prompt_id}")
@@ -154,8 +213,21 @@ def handler(job):
     return {
         "images": images,
         "params": {
-            "prompt": prompt, "seed": seed, "width": width, "height": height,
-            "steps": steps, "cfg": cfg, "denoise": denoise,
+            "lora_name": lora_name,
+            "prompt": prompt,
+            "seed": seed,
+            "width": width,
+            "height": height,
+            "steps": steps,
+            "cfg": cfg,
+            "denoise": denoise,
+            "lora_strength": lora_strength,
+            "style_lora_name": style_lora_name,
+            "style_lora_strength": style_lora_strength,
+            "negative_prompt": negative_prompt,
+            "upscale_denoise": upscale_denoise,
+            "scale_by": scale_by,
+            "upscale_resolution": upscale_resolution,
         },
         "duration_seconds": duration,
     }
