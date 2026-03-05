@@ -35,11 +35,14 @@ def _r2_client():
     )
 
 
-def _download_r2(r2_path: str) -> bytes:
+def download_r2(r2_path: str) -> bytes:
     parts = r2_path[5:].split("/", 1)
     bucket, key = parts[0], parts[1]
     resp = _r2_client().get_object(Bucket=bucket, Key=key)
     return resp["Body"].read()
+
+
+_download_r2 = download_r2  # internal alias
 
 
 def _poll_runpod(job_id: str) -> dict:

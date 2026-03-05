@@ -17,6 +17,13 @@ def _initial_agent_steps(mode: str, preview_image_url: str | None) -> list:
     return steps
 
 
+def _initial_masking_steps() -> list:
+    return [
+        {"key": "submit", "label": "Generate mask", "status": "pending"},
+        {"key": "review", "label": "Review mask",   "status": "pending"},
+    ]
+
+
 def create_pipeline(
     subject: str,
     mode: str,            # "template" | "no_template"
@@ -43,6 +50,7 @@ def create_pipeline(
             "run_masking": run_masking,
             "run_inpainting": run_inpainting,
             "agent_steps": _initial_agent_steps(mode, preview_image_url),
+            "masking_agent_steps": _initial_masking_steps(),
             "current_node": "image_gen",   # "image_gen" | "masking" | "inpainting" | "done"
             "image_gen_result": None,
             "masking_result": None,
@@ -60,13 +68,13 @@ def update_pipeline(pipeline_id: str, **fields):
             _pipelines[pipeline_id].update(fields)
 
 
-def update_agent_step(pipeline_id: str, key: str, status: str, label: str | None = None):
-    """Update a single step's status (and optionally label) inside agent_steps."""
+def update_agent_step(pipeline_id: str, key: str, status: str, label: str | None = None, steps_field: str = "agent_steps"):
+    """Update a single step's status (and optionally label) inside a steps list."""
     with _lock:
         p = _pipelines.get(pipeline_id)
         if not p:
             return
-        for step in p.get("agent_steps", []):
+        for step in p.get(steps_field, []):
             if step["key"] == key:
                 step["status"] = status
                 if label is not None:

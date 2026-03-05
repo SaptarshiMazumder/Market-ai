@@ -42,6 +42,8 @@ def run_pipeline(pipeline_id: str):
         result2 = masking.run(
             generated_r2=result1["r2_path"],
             subject=p["subject"],
+            product_r2=p["product_r2"],
+            on_step=lambda key, status, label=None: update_agent_step(pipeline_id, key, status, label, steps_field="masking_agent_steps"),
         )
 
         if not p.get("run_inpainting", True):

@@ -281,9 +281,14 @@ function PipelineCard({ pipeline: p }) {
         })}
       </div>
 
-      {/* Agent checklist */}
+      {/* Image gen agent checklist */}
       {p.agent_steps?.length > 0 && (
         <AgentChecklist steps={p.agent_steps} />
+      )}
+
+      {/* Masking agent checklist — shown once masking has started */}
+      {p.masking_agent_steps?.length > 0 && p.image_gen_result && (
+        <AgentChecklist steps={p.masking_agent_steps} />
       )}
 
       {/* Generated prompt */}

@@ -1,41 +1,24 @@
-import random
-
-from .runner import NodeFailed, submit_and_fetch
-from .review import review
-
-MAX_ATTEMPTS = 3
-
-_MASK_PARAMS = [
-    {"mask_blur": 30, "mask_dilation": 10},
-    {"mask_blur": 20, "mask_dilation": 15},
-    {"mask_blur": 15, "mask_dilation": 20},
-]
+from .runner import NodeFailed, download_r2
+from . import agent as _agent
 
 
-def run(generated_r2: str, subject: str) -> dict:
-    last_reason = ""
-    for attempt in range(MAX_ATTEMPTS):
-        params = _MASK_PARAMS[attempt]
-        seed = random.randint(1, 999999)
+def run(
+    generated_r2: str,
+    subject: str,
+    product_r2: str,
+    on_step=None,
+) -> dict:
+    # Download both images upfront so the agent can see them
+    generated_image_bytes = download_r2(generated_r2)
+    product_image_bytes = download_r2(product_r2)
 
-        r2_path, image_bytes = submit_and_fetch(
-            generated_r2=generated_r2,
-            subject=subject,
-            mask_blur=params["mask_blur"],
-            mask_dilation=params["mask_dilation"],
-            seed=seed,
-        )
+    if on_step:
+        on_step("submit", "running")
 
-        result = review(image_bytes, subject)
-        print(f"[Masking] attempt={attempt+1} score={result['score']} passed={result['passed']}")
-
-        if result["passed"]:
-            return {
-                "r2_path": r2_path,
-                "score": result["score"],
-                "reason": result["reason"],
-                "attempts_used": attempt + 1,
-            }
-        last_reason = result["reason"]
-
-    raise NodeFailed(f"Masking failed after {MAX_ATTEMPTS} attempts. Last: {last_reason}")
+    return _agent.create_and_run(
+        subject=subject,
+        generated_r2=generated_r2,
+        generated_image_bytes=generated_image_bytes,
+        product_image_bytes=product_image_bytes,
+        on_step=on_step,
+    )
