@@ -24,6 +24,14 @@ def _initial_masking_steps() -> list:
     ]
 
 
+def _initial_inpainting_steps() -> list:
+    return [
+        {"key": "prompt", "label": "Write prompt",  "status": "pending"},
+        {"key": "submit", "label": "Inpaint",        "status": "pending"},
+        {"key": "review", "label": "Review result",  "status": "pending"},
+    ]
+
+
 def create_pipeline(
     subject: str,
     mode: str,            # "template" | "no_template"
@@ -51,7 +59,10 @@ def create_pipeline(
             "run_inpainting": run_inpainting,
             "agent_steps": _initial_agent_steps(mode, preview_image_url),
             "masking_agent_steps": _initial_masking_steps(),
+            "inpainting_agent_steps": _initial_inpainting_steps(),
             "current_node": "image_gen",   # "image_gen" | "masking" | "inpainting" | "done"
+            "current_prompt": None,
+            "current_inpaint_prompt": None,
             "image_gen_result": None,
             "masking_result": None,
             "inpainting_result": None,

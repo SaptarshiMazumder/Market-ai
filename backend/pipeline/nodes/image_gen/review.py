@@ -26,12 +26,44 @@ _WORKFLOW_PARAM_GUIDE = (
 
 def review(image_bytes: bytes, subject: str) -> dict:
     prompt = (
-        f"You are a quality reviewer for AI-generated product photography. Subject: '{subject}'.\n\n"
-        f"Score this image 0–10 based on:\n"
-        f"1. Is the subject ({subject}) clearly visible and correctly worn/used?\n"
-        f"2. Is the image photorealistic (no obvious AI artifacts)?\n"
-        f"3. No body deformities (extra hands/legs, waxy skin, distorted face)?\n\n"
-        f"Reply ONLY with valid JSON: {{\"score\": <float>, \"reason\": \"<one sentence>\"}}"
+        f"You are a strict quality reviewer for AI-generated product photography. "
+        f"The subject that must appear in the image is: '{subject}'.\n\n"
+        f"Score 0–10. Be critical — do NOT give high scores unless the subject is prominently "
+        f"and clearly featured. Most AI images have flaws; find them.\n\n"
+        f"Check ALL of the following:\n\n"
+        f"1. SUBJECT VISIBILITY (most important) — Is '{subject}' clearly visible, "
+        f"unambiguously identifiable, and the clear focal point of the image? "
+        f"If the subject is obscured, too small, blends into the background, is partially "
+        f"cut off, or could be mistaken for something else — that is a major defect. "
+        f"A viewer should immediately recognise the '{subject}' without searching for it.\n\n"
+        f"2. CORRECT USAGE — Is the '{subject}' being worn, held, or used in a natural and "
+        f"correct way? Wrong orientation, impossible usage, or the subject floating detached "
+        f"from the character are defects.\n\n"
+        f"3. PHOTOREALISM — Does this look like a real photograph? "
+        f"Check for AI artefacts: over-smoothed skin, floating objects, unnatural bokeh, "
+        f"impossible lighting, flat textures, or watercolour-like areas.\n\n"
+        f"4. BODY INTEGRITY — Are there body deformities? "
+        f"Extra/missing limbs, fused fingers, distorted face, waxy or plastic-looking skin, "
+        f"mismatched proportions — all are defects.\n\n"
+        f"5. COMPOSITION — Is the framing appropriate for product photography? "
+        f"The subject should be the hero of the shot, not buried in a busy scene.\n\n"
+        f"Score strictly:\n"
+        f"- 9–10: Subject is unmistakably prominent, image is photorealistic, ready for publication\n"
+        f"- 7–8: Subject clearly visible, minor photorealism or composition issues\n"
+        f"- 5–6: Subject present but not prominent, OR noticeable AI artefacts\n"
+        f"- 3–4: Subject hard to find, wrong usage, or clear body deformities\n"
+        f"- 0–2: Subject missing or image fundamentally broken\n\n"
+        f"If the score is below 7.0, return `suggested_prompt_adjustments` — specific, concrete "
+        f"changes the prompt writer should make to fix the issues found. Examples:\n"
+        f"- If subject is too small: suggest closer framing, tighter shot, subject filling the frame\n"
+        f"- If subject is obscured: suggest the character actively displaying/wearing it prominently\n"
+        f"- If wrong usage: describe the correct natural usage\n"
+        f"- If AI artefacts: suggest simpler scene, fewer elements, cleaner background\n"
+        f"- If body deformity: suggest avoiding certain poses or actions that caused it\n\n"
+        f"Reply ONLY with valid JSON:\n"
+        f"{{\"score\": <float>, \"reason\": \"<one specific sentence>\", "
+        f"\"suggested_prompt_adjustments\": \"<concrete prompt guidance>\"}}  "
+        f"— omit suggested_prompt_adjustments if score >= 7.0"
     )
     response = _gemini.models.generate_content(
         model="gemini-2.0-flash",
@@ -43,7 +75,11 @@ def review(image_bytes: bytes, subject: str) -> dict:
     raw = response.text.strip().strip("```json").strip("```").strip()
     data = json.loads(raw)
     score = float(data["score"])
-    return {"score": score, "reason": data.get("reason", ""), "passed": score >= REVIEW_THRESHOLD}
+    passed = score >= REVIEW_THRESHOLD
+    result = {"score": score, "reason": data.get("reason", ""), "passed": passed}
+    if not passed and data.get("suggested_prompt_adjustments"):
+        result["suggested_prompt_adjustments"] = data["suggested_prompt_adjustments"]
+    return result
 
 
 def review_character(image_bytes: bytes, preview_url: str, current_params: dict) -> dict:

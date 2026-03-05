@@ -286,15 +286,27 @@ function PipelineCard({ pipeline: p }) {
         <AgentChecklist steps={p.agent_steps} />
       )}
 
+      {/* Image gen prompt */}
+      {(p.current_prompt || p.image_gen_result?.prompt) && (
+        <p className="text-xs text-zinc-500 italic mb-3 leading-relaxed">
+          {p.current_prompt || p.image_gen_result.prompt}
+        </p>
+      )}
+
       {/* Masking agent checklist — shown once masking has started */}
       {p.masking_agent_steps?.length > 0 && p.image_gen_result && (
         <AgentChecklist steps={p.masking_agent_steps} />
       )}
 
-      {/* Generated prompt */}
-      {(p.current_prompt || p.image_gen_result?.prompt) && (
+      {/* Inpainting agent checklist — shown once inpainting has started */}
+      {p.inpainting_agent_steps?.length > 0 && p.masking_result && (
+        <AgentChecklist steps={p.inpainting_agent_steps} />
+      )}
+
+      {/* Inpainting prompt */}
+      {(p.current_inpaint_prompt || p.inpainting_result?.prompt) && (
         <p className="text-xs text-zinc-500 italic mb-3 leading-relaxed">
-          {p.current_prompt || p.image_gen_result.prompt}
+          {p.current_inpaint_prompt || p.inpainting_result.prompt}
         </p>
       )}
 

@@ -58,6 +58,8 @@ def run_pipeline(pipeline_id: str):
             masked_r2=result2["r2_path"],
             product_r2=p["product_r2"],
             subject=p["subject"],
+            on_prompt=lambda prompt: update_pipeline(pipeline_id, current_inpaint_prompt=prompt),
+            on_step=lambda key, status, label=None: update_agent_step(pipeline_id, key, status, label, steps_field="inpainting_agent_steps"),
         )
         update_pipeline(
             pipeline_id,

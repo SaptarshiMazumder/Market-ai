@@ -35,11 +35,14 @@ def _r2_client():
     )
 
 
-def _download_r2(r2_path: str) -> bytes:
+def download_r2(r2_path: str) -> bytes:
     parts = r2_path[5:].split("/", 1)
     bucket, key = parts[0], parts[1]
     resp = _r2_client().get_object(Bucket=bucket, Key=key)
     return resp["Body"].read()
+
+
+_download_r2 = download_r2  # internal alias
 
 
 def _poll_runpod(job_id: str) -> dict:
@@ -66,6 +69,8 @@ def submit_and_fetch(
     steps: int,
     denoise: float = 1.0,
     guidance: float = 4.0,
+    lan_paint_num_steps: int = 2,
+    lan_paint_prompt_mode: str = "Image First",
 ) -> tuple[str, bytes]:
     job_input = {
         "scene_url": masked_r2,
@@ -75,6 +80,8 @@ def submit_and_fetch(
         "steps": steps,
         "denoise": denoise,
         "guidance": guidance,
+        "lan_paint_num_steps": lan_paint_num_steps,
+        "lan_paint_prompt_mode": lan_paint_prompt_mode,
     }
     r = requests.post(
         f"https://api.runpod.ai/v2/{INPAINT_ENDPOINT}/run",

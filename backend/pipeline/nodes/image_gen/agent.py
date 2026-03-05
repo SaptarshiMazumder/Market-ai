@@ -67,11 +67,24 @@ Every prompt must include ALL of:
   as the reference template character
 
 ## Retry Strategy
-- If quality fails: rethink your prompt style (Format A, B, or C), adjust scene complexity, \
-  or simplify/clarify the action
-- If character match fails: increase lora_strength towards 1.3–1.4 and \
-  upscale_lora_strength towards 0.8–0.9, or follow the suggested_params returned by the tool
-- Never exceed your allowed attempt budget
+**Quality fails:**
+When review_quality fails, the result includes `suggested_prompt_adjustments` — concrete \
+guidance on what to change in your next prompt. ALWAYS apply those adjustments. Do not \
+write a similar prompt and hope for a different result.
+
+If no suggested_prompt_adjustments are provided, use the reason text:
+- Subject not visible / too small → use tighter framing, make subject fill the frame, \
+  describe the subject as prominently worn/held/used in the foreground
+- Subject obscured or blends in → add contrast to the subject, change background, \
+  describe the subject as the clear focal point
+- Body deformity → switch prompt format, simplify the pose/action, avoid complex gestures
+- AI artefacts → reduce scene complexity, avoid busy backgrounds, use simpler lighting
+
+**Character match fails:**
+Follow suggested_params returned by check_character_match, or increase lora_strength \
+towards 1.3–1.4 and upscale_lora_strength towards 0.8–0.9.
+
+Never exceed your allowed attempt budget.
 """
 
 
@@ -174,8 +187,11 @@ def create_and_run(
         Args:
             r2_path: The r2_path returned by submit_image.
         Returns:
-            {"score": float, "reason": str, "passed": bool}
+            {"score": float, "reason": str, "passed": bool,
+             "suggested_prompt_adjustments": str | None}
             Score is 0–10; passed means score ≥ 7.0.
+            When passed is False, suggested_prompt_adjustments contains concrete guidance
+            on what to change in your next prompt. Always apply it if present.
         """
         image_bytes = _image_cache.get(r2_path)
         if not image_bytes:
