@@ -72,7 +72,7 @@ def submit_and_fetch(
         "image_url": generated_r2,
         "object_name": subject,
         "seed": seed,
-        "mask_blur": mask_blur,
+        "mask_blur": min(mask_blur, 10),  # hard cap at 10
         "mask_dilation": mask_dilation,
     }
     r = requests.post(

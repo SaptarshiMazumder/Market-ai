@@ -65,6 +65,32 @@ Every prompt must include ALL of:
 
 **Never include food or edible props in the scene unless the subject itself is a food product. Beverages are allowed.**
 
+## Scenario & Environment Rules
+This pipeline produces product advertising imagery — the goal is to show a real person using \
+or wearing a product in a believable, relatable moment. Keep this in mind at all times:
+
+**Keep scenarios simple and grounded.** The character should be doing something ordinary — \
+walking down a street, sitting at a café, browsing in a store, heading to work, hanging out \
+in a park, etc. Avoid dramatic, cinematic, or adventurous scenarios unless the product \
+clearly calls for it.
+
+**Match the environment to the product.** Ask: where would someone realistically wear or use \
+this product in daily life? Use that as the setting:
+- Casual clothing, streetwear, accessories → urban streets, cafés, parks, shopping areas
+- Office or formal wear → city sidewalks, building lobbies, café interiors
+- Sports or gym wear → gym, running path, urban park
+- Technical or outdoor gear (hiking boots, rain jacket) → trails, mountains, outdoor settings
+- Homewear, loungewear → indoor settings, living room, home café corner
+
+**Default to urban/everyday environments.** If you are unsure, a city street, café terrace, \
+or neutral urban background is always appropriate. Never place a character in a dramatic \
+landscape (cliffside, mountain peak, desert dune, forest) unless the product is explicitly \
+outdoor/adventure gear.
+
+**Actions must be simple and natural.** Walking, sitting, holding a coffee, checking a phone, \
+glancing at a storefront, adjusting clothing — these are the right energy. Avoid running, \
+jumping, extreme poses, action sports, or anything that would require a dramatic backdrop.
+
 ## Accessory-Specific Framing Rules
 For accessories (watches, bracelets, rings, necklaces, lockets, earrings, ties, belts, caps, hats, \
 sunglasses, bags, backpacks, wallets, scarves, gloves, socks, etc.), the shot framing is critical — \
@@ -97,11 +123,21 @@ When review_quality fails, the result includes `suggested_prompt_adjustments` �
 guidance on what to change in your next prompt. ALWAYS apply those adjustments. Do not \
 write a similar prompt and hope for a different result.
 
+When applying suggested_prompt_adjustments, treat them as direct prompt copy — incorporate \
+the specific language suggested, not a paraphrase. If the reviewer describes an exact grip or \
+position, use that description word-for-word or very close to it.
+
 If no suggested_prompt_adjustments are provided, use the reason text:
 - Subject not visible / too small → use tighter framing, make subject fill the frame, \
   describe the subject as prominently worn/held/used in the foreground
 - Subject obscured or blends in → add contrast to the subject, change background, \
   describe the subject as the clear focal point
+- Physical interaction wrong (floating object, wrong grip, impossible pose) → \
+  add precise anatomical language: describe the exact contact between the character and the \
+  subject — which hand, which fingers, how the weight rests, what body part supports it. \
+  A floating bag needs "right hand gripping the top handle, arm slightly bent, bag hanging \
+  naturally at hip level". A shoe worn incorrectly needs "foot firmly inside shoe, laces tied, \
+  heel resting flush against the insole". Be this specific.
 - Body deformity → switch prompt format, simplify the pose/action, avoid complex gestures
 - AI artefacts → reduce scene complexity, avoid busy backgrounds, use simpler lighting
 
@@ -133,13 +169,14 @@ def create_and_run(
     result_store: dict = {}
     _image_cache: dict[str, bytes] = {}
     _params_cache: dict[str, dict] = {}
+    _last_attempt: dict = {}   # fallback if agent exhausts budget without passing
     attempt_count = [0]
 
     # ── Tools (closures so they capture local context) ────────────────────────
 
-    def _step(key: str, status: str, label: str | None = None):
+    def _step(key: str, status: str, label: str | None = None, reason: str | None = None):
         if on_step:
-            on_step(key, status, label)
+            on_step(key, status, label, reason)
 
     def notify_prompt(prompt: str) -> str:
         """
@@ -200,6 +237,8 @@ def create_and_run(
 
         _image_cache[r2_path] = image_bytes
         _params_cache[r2_path] = params
+        _last_attempt["r2_path"] = r2_path
+        _last_attempt["prompt"] = prompt
         _step("submit", "done", f"Generated (attempt {attempt_count[0]})")
         _step("quality", "running")
         print(f"[ImageGen agent] attempt={attempt_count[0]} submitted r2={r2_path}")
@@ -227,8 +266,7 @@ def create_and_run(
             if mode == "template" and preview_image_url:
                 _step("character", "running")
         else:
-            _step("quality", "failed")
-            # Reset submit label for the next attempt
+            _step("quality", "failed", reason=result.get("reason"))
             _step("prompt", "running")
         return result
 
@@ -254,7 +292,7 @@ def create_and_run(
         if result["passed"]:
             _step("character", "done")
         else:
-            _step("character", "failed")
+            _step("character", "failed", reason=result.get("reason"))
             _step("prompt", "running")
         return result
 
@@ -352,7 +390,17 @@ def create_and_run(
         asyncio.set_event_loop(None)
 
     if "result" not in result_store:
+        if _last_attempt.get("r2_path"):
+            print(f"[ImageGen agent] Exhausted attempts — proceeding with last attempt r2={_last_attempt['r2_path']}")
+            _step("quality", "done")  # mark as done so pipeline continues
+            return {
+                "r2_path": _last_attempt["r2_path"],
+                "prompt": _last_attempt.get("prompt", ""),
+                "score": 0.0,
+                "reason": "Proceeding after exhausting retry budget.",
+                "attempts_used": attempt_count[0],
+            }
         raise NodeFailed(
-            f"Agent did not complete image generation after {attempt_count[0]} attempt(s)."
+            f"Agent did not produce any image after {attempt_count[0]} attempt(s)."
         )
     return result_store["result"]

@@ -345,11 +345,16 @@ function AgentChecklist({ steps }) {
       {steps.map(step => {
         const { glyph, cls } = icon[step.status] ?? icon.pending
         return (
-          <div key={step.key} className="flex items-center gap-2">
-            <span className={`text-xs font-mono w-4 text-center ${cls}`}>{glyph}</span>
-            <span className={`text-xs ${step.status === 'running' ? 'text-zinc-200' : step.status === 'done' ? 'text-zinc-400' : step.status === 'failed' ? 'text-red-400' : 'text-zinc-600'}`}>
-              {step.label}
-            </span>
+          <div key={step.key}>
+            <div className="flex items-center gap-2">
+              <span className={`text-xs font-mono w-4 text-center ${cls}`}>{glyph}</span>
+              <span className={`text-xs ${step.status === 'running' ? 'text-zinc-200' : step.status === 'done' ? 'text-zinc-400' : step.status === 'failed' ? 'text-red-400' : 'text-zinc-600'}`}>
+                {step.label}
+              </span>
+            </div>
+            {step.status === 'failed' && step.reason && (
+              <p className="ml-6 text-xs text-red-500/80 italic leading-snug">{step.reason}</p>
+            )}
           </div>
         )
       })}

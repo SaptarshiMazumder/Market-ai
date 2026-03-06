@@ -29,7 +29,7 @@ def run_pipeline(pipeline_id: str):
             template_name=p.get("template_name"),
             preview_image_url=p.get("preview_image_url"),
             on_prompt=lambda prompt: update_pipeline(pipeline_id, current_prompt=prompt),
-            on_step=lambda key, status, label=None: update_agent_step(pipeline_id, key, status, label),
+            on_step=lambda key, status, label=None, reason=None: update_agent_step(pipeline_id, key, status, label, reason),
         )
         if not p.get("run_masking", True):
             update_pipeline(pipeline_id, image_gen_result=result1, current_node="done", status="completed", completed_at=time.time())
@@ -43,7 +43,7 @@ def run_pipeline(pipeline_id: str):
             generated_r2=result1["r2_path"],
             subject=p["subject"],
             product_r2=p["product_r2"],
-            on_step=lambda key, status, label=None: update_agent_step(pipeline_id, key, status, label, steps_field="masking_agent_steps"),
+            on_step=lambda key, status, label=None, reason=None: update_agent_step(pipeline_id, key, status, label, reason, steps_field="masking_agent_steps"),
         )
 
         if not p.get("run_inpainting", True):
@@ -59,7 +59,7 @@ def run_pipeline(pipeline_id: str):
             product_r2=p["product_r2"],
             subject=p["subject"],
             on_prompt=lambda prompt: update_pipeline(pipeline_id, current_inpaint_prompt=prompt),
-            on_step=lambda key, status, label=None: update_agent_step(pipeline_id, key, status, label, steps_field="inpainting_agent_steps"),
+            on_step=lambda key, status, label=None, reason=None: update_agent_step(pipeline_id, key, status, label, reason, steps_field="inpainting_agent_steps"),
         )
         update_pipeline(
             pipeline_id,

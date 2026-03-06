@@ -114,11 +114,12 @@ def create_and_run(
     """
     result_store: dict = {}
     _result_cache: dict[str, bytes] = {}
+    _last_attempt: dict = {}
     attempt_count = [0]
 
-    def _step(key: str, status: str, label: str | None = None):
+    def _step(key: str, status: str, label: str | None = None, reason: str | None = None):
         if on_step:
-            on_step(key, status, label)
+            on_step(key, status, label, reason)
 
     def notify_prompt(prompt: str) -> str:
         """
@@ -178,6 +179,8 @@ def create_and_run(
             return {"error": str(e)}
 
         _result_cache[r2_path] = image_bytes
+        _last_attempt["r2_path"] = r2_path
+        _last_attempt["prompt"] = prompt
         _step("submit", "done", f"Inpainted (attempt {attempt_count[0]})")
         _step("review", "running")
         print(f"[Inpainting agent] attempt={attempt_count[0]} r2={r2_path}")
@@ -203,7 +206,7 @@ def create_and_run(
         if result["passed"]:
             _step("review", "done")
         else:
-            _step("review", "failed")
+            _step("review", "failed", reason=result.get("reason"))
             _step("prompt", "running")
         return result
 
@@ -281,7 +284,17 @@ def create_and_run(
         asyncio.set_event_loop(None)
 
     if "result" not in result_store:
+        if _last_attempt.get("r2_path"):
+            print(f"[Inpainting agent] Exhausted attempts — proceeding with last attempt r2={_last_attempt['r2_path']}")
+            _step("review", "done")
+            return {
+                "r2_path": _last_attempt["r2_path"],
+                "prompt": _last_attempt.get("prompt", ""),
+                "score": 0.0,
+                "reason": "Proceeding after exhausting retry budget.",
+                "attempts_used": attempt_count[0],
+            }
         raise NodeFailed(
-            f"Inpainting agent did not complete after {attempt_count[0]} attempt(s)."
+            f"Inpainting agent did not produce any result after {attempt_count[0]} attempt(s)."
         )
     return result_store["result"]

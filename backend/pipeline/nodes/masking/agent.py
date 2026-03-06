@@ -32,15 +32,15 @@ with the actual product during inpainting.
 - object_name: text description of the subject — already set from pipeline context
 - seed: randomises Florence2 grounding — use a different seed on retry if segmentation fails
 - mask_blur (node 104 'MaskBlur+', param: amount):
-  Controls softness of mask edges.
-  - 5–15: sharp, precise — good for hard-edged objects (bags, bottles, shoes, accessories)
-  - 20–35: moderate — good for most clothing on people
-  - 40–80: very soft — rarely needed; only for highly diffuse subjects
+  Controls softness of mask edges. Maximum value is 10 — do not exceed this.
+  - 1–5: very sharp, crisp edges — good for hard-edged objects (bags, shoes, accessories)
+  - 6–10: slightly softened — acceptable for clothing; this is the maximum allowed
 - mask_dilation (node 110 'ImpactDilateMask', param: dilation):
-  Expands the mask outward from the detected boundary.
-  - 5–15: tight, follows boundary closely — use for small accessories or precise objects
-  - 20–40: standard margin — good for most clothing
-  - 50+: very expanded — avoid unless subject is very large relative to frame
+  Expands the mask outward from the detected boundary. Use generous values to ensure
+  the inpainting model has enough margin to blend the product naturally.
+  - 20–35: standard — good for small accessories and precise objects
+  - 35–55: recommended for most clothing and medium-sized items
+  - 55–80: large — use for big items (coats, full-body garments, large bags)
 
 ## Parameter Selection Strategy
 Before submitting, look at BOTH images provided:
@@ -48,10 +48,10 @@ Before submitting, look at BOTH images provided:
 2. The product image — understand the object type (soft clothing vs hard accessory vs structured item)
 
 Choose blur and dilation to match:
-- Soft/flowing clothing → moderate blur (20–35), standard dilation (20–35)
-- Structured garments (jackets, coats) → moderate blur (15–25), standard dilation (20–30)
-- Hard accessories (bags, shoes, bottles) → low blur (5–15), tighter dilation (10–20)
-- Jewellery / small items → low blur (5–10), tight dilation (5–15)
+- Soft/flowing clothing → blur (6–10), dilation (40–55)
+- Structured garments (jackets, coats) → blur (5–8), dilation (35–50)
+- Hard accessories (bags, shoes, bottles) → blur (2–6), dilation (25–40)
+- Jewellery / small items → blur (1–5), dilation (20–30)
 
 ## Review Criteria
 After generating the mask, review by looking at BOTH the mask image AND the product image:
@@ -89,19 +89,20 @@ def create_and_run(
     """
     result_store: dict = {}
     _mask_cache: dict[str, bytes] = {}
+    _last_attempt: dict = {}
     attempt_count = [0]
 
-    def _step(key: str, status: str, label: str | None = None):
+    def _step(key: str, status: str, label: str | None = None, reason: str | None = None):
         if on_step:
-            on_step(key, status, label)
+            on_step(key, status, label, reason)
 
     def submit_mask(mask_blur: int, mask_dilation: int) -> dict:
         """
         Submit the generated image to the masking worker with your chosen parameters.
 
         Args:
-            mask_blur: Softness of mask edges (5–80). Lower = sharper.
-            mask_dilation: How far to expand the mask outward (5–60). Lower = tighter.
+            mask_blur: Softness of mask edges (1–10 max). Lower = sharper. Values above 10 are capped to 10.
+            mask_dilation: How far to expand the mask outward (20–80). Use generous values for good inpainting margin.
         Returns:
             {"r2_path": str} on success, {"error": str} on failure.
         """
@@ -123,6 +124,7 @@ def create_and_run(
             return {"error": str(e)}
 
         _mask_cache[r2_path] = mask_bytes
+        _last_attempt["r2_path"] = r2_path
         _step("submit", "done", f"Masked (attempt {attempt_count[0]})")
         _step("review", "running")
         print(f"[Masking agent] attempt={attempt_count[0]} r2={r2_path}")
@@ -145,7 +147,7 @@ def create_and_run(
         if result["passed"]:
             _step("review", "done")
         else:
-            _step("review", "failed")
+            _step("review", "failed", reason=result.get("reason"))
             _step("submit", "running")
         return result
 
@@ -219,7 +221,16 @@ def create_and_run(
         asyncio.set_event_loop(None)
 
     if "result" not in result_store:
+        if _last_attempt.get("r2_path"):
+            print(f"[Masking agent] Exhausted attempts — proceeding with last attempt r2={_last_attempt['r2_path']}")
+            _step("review", "done")
+            return {
+                "r2_path": _last_attempt["r2_path"],
+                "score": 0.0,
+                "reason": "Proceeding after exhausting retry budget.",
+                "attempts_used": attempt_count[0],
+            }
         raise NodeFailed(
-            f"Masking agent did not complete after {attempt_count[0]} attempt(s)."
+            f"Masking agent did not produce any mask after {attempt_count[0]} attempt(s)."
         )
     return result_store["result"]

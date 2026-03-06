@@ -7,7 +7,7 @@ from botocore.config import Config
 
 RUNPOD_API_KEY      = os.environ.get("RUNPOD_API_KEY", "")
 LORA_ENDPOINT_ID    = "4zt599q013q0cz"
-Z_TURBO_ENDPOINT_ID = "vycazppjzv96nv"
+Z_TURBO_ENDPOINT_ID = "1dv4vwaqf3quge"
 TERMINAL_FAILED     = {"FAILED", "CANCELLED", "TIMED_OUT", "CANCELLED_BY_SYSTEM"}
 POLL_INTERVAL       = 5
 

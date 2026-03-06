@@ -79,8 +79,8 @@ def update_pipeline(pipeline_id: str, **fields):
             _pipelines[pipeline_id].update(fields)
 
 
-def update_agent_step(pipeline_id: str, key: str, status: str, label: str | None = None, steps_field: str = "agent_steps"):
-    """Update a single step's status (and optionally label) inside a steps list."""
+def update_agent_step(pipeline_id: str, key: str, status: str, label: str | None = None, reason: str | None = None, steps_field: str = "agent_steps"):
+    """Update a single step's status (and optionally label/reason) inside a steps list."""
     with _lock:
         p = _pipelines.get(pipeline_id)
         if not p:
@@ -90,6 +90,10 @@ def update_agent_step(pipeline_id: str, key: str, status: str, label: str | None
                 step["status"] = status
                 if label is not None:
                     step["label"] = label
+                if reason is not None:
+                    step["reason"] = reason
+                elif status != "failed":
+                    step.pop("reason", None)  # clear stale reason on non-failure
                 break
 
 
