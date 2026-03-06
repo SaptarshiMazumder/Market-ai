@@ -3,3 +3,11 @@ comfyui:
     diffusion_models: models/diffusion_models/
     text_encoders: models/text_encoders/
     vae: models/vae/
+    loras: models/loras/
+
+workspace:
+    base_path: /workspace
+    diffusion_models: models/diffusion_models/
+    text_encoders: models/text_encoders/
+    vae: models/vae/
+    loras: models/loras/

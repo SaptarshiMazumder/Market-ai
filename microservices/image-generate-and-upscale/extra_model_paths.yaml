@@ -3,4 +3,13 @@ comfyui:
     diffusion_models: models/diffusion_models/
     text_encoders: models/text_encoders/
     vae: models/vae/
+    loras: models/loras/
+    SEEDVR2: models/SEEDVR2/
+
+workspace:
+    base_path: /workspace
+    diffusion_models: models/diffusion_models/
+    text_encoders: models/text_encoders/
+    vae: models/vae/
+    loras: models/loras/
     SEEDVR2: models/SEEDVR2/
